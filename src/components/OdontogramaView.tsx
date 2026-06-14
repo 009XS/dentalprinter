@@ -15,15 +15,17 @@ import { Patient, ToothState, BudgetItem } from '../types';
 import { getOdontogram, saveOdontogram } from '../api';
 
 interface OdontogramaViewProps {
-  activePatient: Patient;
+  activePatient?: Patient;
   onAddTreatmentItem: (item: BudgetItem) => void;
   searchQuery: string;
+  onOpenPatientModal?: () => void;
 }
 
 export default function OdontogramaView({
   activePatient,
   onAddTreatmentItem,
-  searchQuery
+  searchQuery,
+  onOpenPatientModal
 }: OdontogramaViewProps) {
   const [isPediatric, setIsPediatric] = useState(false);
   const [selectedTooth, setSelectedTooth] = useState<number | null>(18); // Diente 18 seleccionado por defecto
@@ -36,6 +38,7 @@ export default function OdontogramaView({
   const [teethStates, setTeethStates] = useState<Record<number, ToothState>>({});
 
   useEffect(() => {
+    if (!activePatient) return;
     getOdontogram(activePatient.id)
       .then((data) => {
         if (data && data.teeth) {
@@ -49,7 +52,31 @@ export default function OdontogramaView({
       .catch((err) => {
         console.error('Error al cargar odontograma:', err);
       });
-  }, [activePatient.id]);
+  }, [activePatient?.id]);
+
+  if (!activePatient) {
+    return (
+      <div className="p-6 max-w-lg mx-auto bg-white dark:bg-slate-900 border border-[#ebeef0] dark:border-slate-800 rounded-2xl shadow-sm mt-12 text-center space-y-6 font-sans">
+        <div className="w-16 h-16 bg-blue-50 dark:bg-blue-950/40 rounded-full flex items-center justify-center mx-auto text-blue-600 dark:text-blue-450 animate-pulse">
+          <Activity className="w-8 h-8" />
+        </div>
+        <div className="space-y-2">
+          <h3 className="font-serif text-2xl font-bold text-slate-900 dark:text-white">Sin Paciente Seleccionado</h3>
+          <p className="text-xs text-[#444748] dark:text-slate-400 max-w-sm mx-auto leading-relaxed">
+            Para registrar hallazgos en el odontograma e iniciar un plan de tratamiento, primero debes registrar o seleccionar un paciente activo en el portal clínico.
+          </p>
+        </div>
+        {onOpenPatientModal && (
+          <button 
+            onClick={onOpenPatientModal}
+            className="w-full bg-blue-600 hover:bg-blue-700 text-white font-sans font-bold text-xs uppercase tracking-wider py-3 px-4 rounded-xl shadow-xs transition-colors cursor-pointer transform active:scale-98"
+          >
+            Registrar Paciente Nuevo
+          </button>
+        )}
+      </div>
+    );
+  }
 
   // Manejar selección de dientes
   const selectTooth = (id: number) => {

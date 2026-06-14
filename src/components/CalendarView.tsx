@@ -70,7 +70,12 @@ export default function CalendarView({
 
   // Creación automática de reserva sugerida
   const acceptAiProposal = () => {
-    const randomPatient = patients[Math.floor(Math.random() * patients.length)] || patients[0];
+    if (patients.length === 0) {
+      alert('Por favor, registra al menos un paciente antes de agendar una propuesta de la IA.');
+      setShowAiModal(false);
+      return;
+    }
+    const randomPatient = patients[Math.floor(Math.random() * patients.length)];
     const newAppt: Appointment = {
       id: `ai-appt-${Date.now()}`,
       time: '11:45 AM',

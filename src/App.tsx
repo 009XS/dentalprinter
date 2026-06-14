@@ -255,6 +255,7 @@ export default function App() {
             activePatient={activePatientObj}
             onAddTreatmentItem={handleAddTreatmentItem}
             searchQuery={searchQuery}
+            onOpenPatientModal={() => setPatientModalOpen(true)}
           />
         );
       case 'calendar':
@@ -276,6 +277,7 @@ export default function App() {
             liveItems={liveItems}
             setLiveItems={setLiveItems}
             searchQuery={searchQuery}
+            onOpenPatientModal={() => setPatientModalOpen(true)}
           />
         );
       case 'radiology':

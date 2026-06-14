@@ -17,10 +17,11 @@ import { createBudget } from '../api';
 interface PresupuestosViewProps {
   budgets: Budget[];
   setBudgets: (b: Budget[]) => void;
-  activePatient: Patient;
+  activePatient?: Patient;
   liveItems: BudgetItem[];
   setLiveItems: (items: BudgetItem[]) => void;
   searchQuery: string;
+  onOpenPatientModal?: () => void;
 }
 
 export default function PresupuestosView({
@@ -29,7 +30,8 @@ export default function PresupuestosView({
   activePatient,
   liveItems,
   setLiveItems,
-  searchQuery
+  searchQuery,
+  onOpenPatientModal
 }: PresupuestosViewProps) {
   const [activeBudgetId, setActiveBudgetId] = useState<string>('live');
   const [discountPercent, setDiscountPercent] = useState<number>(5);
@@ -44,6 +46,30 @@ export default function PresupuestosView({
     }
   }, [budgets]);
 
+  if (!activePatient) {
+    return (
+      <div className="p-6 max-w-lg mx-auto bg-white dark:bg-slate-900 border border-[#ebeef0] dark:border-slate-800 rounded-2xl shadow-sm mt-12 text-center space-y-6 font-sans">
+        <div className="w-16 h-16 bg-blue-50 dark:bg-blue-950/40 rounded-full flex items-center justify-center mx-auto text-blue-600 dark:text-blue-450 animate-pulse">
+          <FileText className="w-8 h-8" />
+        </div>
+        <div className="space-y-2">
+          <h3 className="font-serif text-2xl font-bold text-slate-900 dark:text-white">Sin Paciente Seleccionado</h3>
+          <p className="text-xs text-[#444748] dark:text-slate-400 max-w-sm mx-auto leading-relaxed">
+            Para poder planificar y visualizar los presupuestos de un paciente, primero debes registrar un paciente nuevo o seleccionar uno activo en el portal clínico.
+          </p>
+        </div>
+        {onOpenPatientModal && (
+          <button 
+            onClick={onOpenPatientModal}
+            className="w-full bg-blue-600 hover:bg-blue-700 text-white font-sans font-bold text-xs uppercase tracking-wider py-3 px-4 rounded-xl shadow-xs transition-colors cursor-pointer transform active:scale-98"
+          >
+            Registrar Paciente Nuevo
+          </button>
+        )}
+      </div>
+    );
+  }
+
   // Cálculos dinámicos de KPIs reales de presupuestos
   const pendingBudgets = budgets.filter(b => b.status === 'Pendiente');
   const totalPendingVal = pendingBudgets.reduce((sum, b) => {
@@ -57,7 +83,7 @@ export default function PresupuestosView({
   const recentApprovedCount = approvedBudgets.length;
 
   const saveLiveBudget = async () => {
-    if (liveItems.length === 0) return;
+    if (liveItems.length === 0 || !activePatient) return;
     try {
       const newBudget = await createBudget({
         patientId: activePatient.id,
@@ -92,7 +118,7 @@ export default function PresupuestosView({
   const activeBudget = budgets.find(b => b.id === activeBudgetId);
 
   // Datos del paciente activo
-  const activeName = isLive ? activePatient.name : (activeBudget?.patientName || activePatient?.name || 'Paciente');
+  const activeName = isLive ? (activePatient?.name || 'Paciente') : (activeBudget?.patientName || activePatient?.name || 'Paciente');
   const activeItems = isLive ? liveItems : (activeBudget?.items || []);
 
   // Cálculos dinámicos reales basados en la lista de ítems activos
@@ -228,7 +254,7 @@ export default function PresupuestosView({
             {filteredBudgets.map(b => (
               <option key={b.id} value={b.id}>{b.patientName} - Folio {b.id} ({b.items.length} conceptos)</option>
             ))}
-            <option value="live">Odontograma Activo: {activePatient.name} ({liveItems.length} conceptos agregados)</option>
+            <option value="live">Odontograma Activo: {activePatient?.name || 'Paciente'} ({liveItems.length} conceptos agregados)</option>
           </select>
         </div>
       </div>
@@ -241,7 +267,7 @@ export default function PresupuestosView({
           <div>
             <div className="flex items-center gap-2 mb-1">
               <h3 className="font-sans font-bold text-sm text-[#181c1e] dark:text-white uppercase">
-                {isLive ? `PR-ACTIVO-${activePatient.id.slice(-4)}` : activeBudgetId}
+                {isLive ? `PR-ACTIVO-${activePatient?.id.slice(-4) || 'N/A'}` : activeBudgetId}
               </h3>
               <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[9px] font-bold uppercase bg-[#fff3e0] text-[#e65100]">
                 Pendiente
