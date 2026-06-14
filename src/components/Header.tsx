@@ -10,6 +10,7 @@ import {
   X,
   XCircle
 } from 'lucide-react';
+import { markNotificationsRead } from '../api';
 import type { Patient } from '../types';
 
 interface HeaderProps {
@@ -27,6 +28,8 @@ interface HeaderProps {
   patients: Patient[];
   selectedPatientId: string;
   setSelectedPatientId: (id: string) => void;
+  notifications: any[];
+  setNotifications: (notifications: any[]) => void;
 }
 
 export default function Header({
@@ -43,7 +46,9 @@ export default function Header({
   setMobileMenuOpen,
   patients,
   selectedPatientId,
-  setSelectedPatientId
+  setSelectedPatientId,
+  notifications,
+  setNotifications
 }: HeaderProps) {
   const [notifDropdownOpen, setNotifDropdownOpen] = useState(false);
 
@@ -59,16 +64,15 @@ export default function Header({
     }
   };
 
-  // Alertas traducidas
-  const mockNotifications = [
-    { id: 'n1', title: 'Nueva Cita Reservada', desc: 'Emma Watson - Hoy a las 08:45 AM', time: 'Hace 10 min' },
-    { id: 'n2', title: 'Luis Mendoza reprogramó', desc: 'Solicitó cambio por chat de WhatsApp', time: 'Hace 25 min' },
-    { id: 'n3', title: 'Radiografía Completada', desc: 'Carlos Mendoza - Escaneo panorámico dental cargado', time: 'Hace 1 h' }
-  ];
-
-  const clearNotifications = () => {
-    setNotificationsCount(0);
-    setNotifDropdownOpen(false);
+  const clearNotifications = async () => {
+    try {
+      await markNotificationsRead();
+      setNotificationsCount(0);
+      setNotifications(notifications.map((n: any) => ({ ...n, read: true })));
+      setNotifDropdownOpen(false);
+    } catch (err) {
+      console.error('Error al marcar notificaciones como leídas:', err);
+    }
   };
 
   return (
@@ -181,29 +185,53 @@ export default function Header({
                 )}
               </div>
               <div className="divide-y divide-[#ebeef0] dark:divide-slate-700 max-h-72 overflow-y-auto">
-                {notificationsCount === 0 ? (
+                {notifications.length === 0 ? (
                   <div className="p-6 text-center text-slate-400 text-xs">
                     No hay notificaciones activas.
                   </div>
                 ) : (
-                  mockNotifications.map((n) => (
-                    <div key={n.id} className="p-3 hover:bg-slate-50 dark:hover:bg-slate-800/40 transition-colors">
-                      <div className="flex justify-between items-start">
-                        <p className="text-xs font-semibold text-[#181c1e] dark:text-white">{n.title}</p>
-                        <span className="text-[9px] text-[#444748] dark:text-slate-400 font-medium shrink-0 ml-1">{n.time}</span>
-                      </div>
-                      <p className="text-2xs text-[#444748] dark:text-slate-350 mt-1">{n.desc}</p>
-                    </div>
-                  ))
+                  notifications.map((n: any) => {
+                    const handleNotificationClick = () => {
+                      setNotifDropdownOpen(false);
+                      const titleLower = n.title.toLowerCase();
+                      const descLower = n.desc.toLowerCase();
+                      if (titleLower.includes('ficha') || titleLower.includes('paciente') || descLower.includes('expediente')) {
+                        setCurrentTab('patients');
+                      } else if (titleLower.includes('cita') || titleLower.includes('reserva') || titleLower.includes('programada')) {
+                        setCurrentTab('calendar');
+                      } else if (titleLower.includes('presupuesto')) {
+                        setCurrentTab('presupuestos');
+                      } else {
+                        setCurrentTab('dashboard');
+                      }
+                    };
+
+                    return (
+                      <button 
+                        key={n.id} 
+                        onClick={handleNotificationClick}
+                        className="w-full text-left p-3 hover:bg-slate-50 dark:hover:bg-slate-800/40 transition-colors block cursor-pointer"
+                      >
+                        <div className="flex justify-between items-start">
+                          <p className={`text-xs font-semibold text-[#181c1e] dark:text-white flex items-center gap-1 ${!n.read ? 'text-blue-600 dark:text-blue-400' : ''}`}>
+                            {!n.read && <span className="w-1.5 h-1.5 bg-blue-600 dark:bg-blue-400 rounded-full shrink-0"></span>}
+                            {n.title}
+                          </p>
+                          <span className="text-[9px] text-[#444748] dark:text-slate-400 font-medium shrink-0 ml-1">{n.time}</span>
+                        </div>
+                        <p className="text-2xs text-[#444748] dark:text-slate-355 mt-1">{n.desc}</p>
+                      </button>
+                    );
+                  })
                 )}
               </div>
-              {notificationsCount > 0 && (
+              {notifications.length > 0 && (
                 <div className="p-2 border-t border-[#ebeef0] dark:border-slate-700 bg-slate-50 dark:bg-slate-800/80 text-center">
                   <button 
-                    onClick={() => { setNotifDropdownOpen(false); setCurrentTab('dashboard'); }}
+                    onClick={() => { setNotifDropdownOpen(false); setCurrentTab('notifications'); }}
                     className="text-[11px] text-blue-600 dark:text-blue-400 font-bold hover:underline cursor-pointer"
                   >
-                    Ver flujo clínico activo
+                    Ver todas las alertas
                   </button>
                 </div>
               )}

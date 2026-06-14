@@ -23,7 +23,7 @@ import OdontogramaView from './components/OdontogramaView';
 import PresupuestosView from './components/PresupuestosView';
 import RadiologyView from './components/RadiologyView';
 import SettingsView from './components/SettingsView';
-import { getToken, setToken, bootstrap, login, logout, createAppointment, createPatient } from './api';
+import { getToken, setToken, bootstrap, login, logout, createAppointment, createPatient, markNotificationsRead } from './api';
 
 export default function App() {
   // Enrutamiento de vistas y estados globales
@@ -31,6 +31,7 @@ export default function App() {
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [isDarkMode, setIsDarkMode] = useState<boolean>(false);
   const [notificationsCount, setNotificationsCount] = useState<number>(0);
+  const [notifications, setNotifications] = useState<any[]>([]);
   
   // Base de datos clínica
   const [patients, setPatients] = useState<Patient[]>([]);
@@ -65,6 +66,7 @@ export default function App() {
         setAppointments(data.appointments || []);
         setChats(data.chats || []);
         setBudgets(data.budgets || []);
+        setNotifications(data.notifications || []);
         setNotificationsCount(data.notifications?.filter((n: any) => !n.read).length || 0);
         if (data.patients && data.patients.length > 0) {
           setSelectedPatientId(data.patients[0].id);
@@ -280,6 +282,136 @@ export default function App() {
         return <RadiologyView />;
       case 'settings':
         return <SettingsView userRole={user?.role} />;
+      case 'notifications':
+        return (
+          <div className="p-6 overflow-y-auto space-y-6">
+            <div className="flex justify-between items-start border-b border-sky-100/10 dark:border-slate-800 pb-5">
+              <div>
+                <h2 className="font-serif text-3xl md:text-5xl font-bold text-slate-900 dark:text-white">Notificaciones</h2>
+                <p className="font-sans text-sm md:text-base text-[#444748] dark:text-slate-400 mt-1">
+                  Historial de alertas clínicas y eventos del sistema.
+                </p>
+              </div>
+              {notifications.length > 0 && (
+                <button 
+                  onClick={async () => {
+                    try {
+                      await markNotificationsRead();
+                      setNotificationsCount(0);
+                      setNotifications(notifications.map(n => ({ ...n, read: true })));
+                      alert('Notificaciones marcadas como leídas.');
+                    } catch (err: any) {
+                      alert('Error: ' + err.message);
+                    }
+                  }}
+                  className="bg-blue-600 hover:bg-blue-700 text-white dark:bg-blue-500 dark:hover:bg-blue-600 font-sans font-bold text-xs uppercase tracking-wider py-2 px-4 rounded-lg cursor-pointer transition-colors"
+                >
+                  Marcar todas como leídas
+                </button>
+              )}
+            </div>
+
+            <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl overflow-hidden shadow-xs divide-y divide-[#ebeef0] dark:divide-slate-850">
+              {notifications.length === 0 ? (
+                <div className="p-12 text-center text-slate-400 text-sm">
+                  No hay notificaciones ni alertas registradas en el sistema.
+                </div>
+              ) : (
+                notifications.map((n) => {
+                  const titleLower = n.title.toLowerCase();
+                  const descLower = n.desc.toLowerCase();
+                  const handleNotificationClick = () => {
+                    if (titleLower.includes('ficha') || titleLower.includes('paciente') || descLower.includes('expediente')) {
+                      setCurrentTab('patients');
+                    } else if (titleLower.includes('cita') || titleLower.includes('reserva') || titleLower.includes('programada')) {
+                      setCurrentTab('calendar');
+                    } else if (titleLower.includes('presupuesto')) {
+                      setCurrentTab('presupuestos');
+                    } else {
+                      setCurrentTab('dashboard');
+                    }
+                  };
+
+                  return (
+                    <div 
+                      key={n.id} 
+                      onClick={handleNotificationClick}
+                      className={`p-4 hover:bg-slate-50 dark:hover:bg-slate-800/40 transition-colors flex justify-between items-start gap-4 cursor-pointer ${
+                        !n.read ? 'bg-blue-50/20 dark:bg-blue-900/5' : ''
+                      }`}
+                    >
+                      <div className="space-y-1">
+                        <div className="flex items-center gap-2">
+                          {!n.read && <span className="w-1.5 h-1.5 bg-blue-600 dark:bg-blue-400 rounded-full shrink-0"></span>}
+                          <p className="text-sm font-semibold text-[#181c1e] dark:text-white">{n.title}</p>
+                        </div>
+                        <p className="text-xs text-slate-500 dark:text-slate-400">{n.desc}</p>
+                      </div>
+                      <span className="text-[10px] text-slate-400 shrink-0 font-medium">{n.time}</span>
+                    </div>
+                  );
+                })
+              )}
+            </div>
+          </div>
+        );
+      case 'support':
+        return (
+          <div className="p-6 overflow-y-auto space-y-6">
+            <div className="border-b border-sky-100/10 dark:border-slate-800 pb-5">
+              <h2 className="font-serif text-3xl md:text-5xl font-bold text-slate-900 dark:text-white">Soporte Técnico</h2>
+              <p className="font-sans text-sm md:text-base text-[#444748] dark:text-slate-400 mt-1">
+                ¿Necesitas ayuda con el portal clínico o la impresora dental? Contacta con el equipo técnico.
+              </p>
+            </div>
+
+            <div className="max-w-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-6 shadow-xs font-sans text-sm space-y-4">
+              <h3 className="font-bold text-base text-slate-900 dark:text-white">Enviar Ticket de Soporte</h3>
+              <form 
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  alert('¡Ticket enviado con éxito! Nuestro soporte técnico se pondrá en contacto a la brevedad.');
+                  setCurrentTab('dashboard');
+                }} 
+                className="space-y-4"
+              >
+                <div>
+                  <label className="block text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase mb-1">Asunto</label>
+                  <input 
+                    type="text" 
+                    required 
+                    placeholder="Ej. Problema con sincronización de odontograma o impresora" 
+                    className="w-full text-xs font-semibold rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 text-slate-800 dark:text-white p-2.5 outline-none focus:ring-1 focus:ring-blue-600"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase mb-1">Descripción de la Incidencia</label>
+                  <textarea 
+                    required 
+                    rows={4}
+                    placeholder="Describe detalladamente el problema..." 
+                    className="w-full text-xs font-semibold rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 text-slate-800 dark:text-white p-2.5 outline-none focus:ring-1 focus:ring-blue-600"
+                  />
+                </div>
+                <div className="flex justify-end gap-2.5">
+                  <button 
+                    type="submit"
+                    className="bg-blue-600 hover:bg-blue-700 text-white font-sans font-bold py-2.5 px-4 rounded-lg uppercase cursor-pointer"
+                  >
+                    Enviar Incidencia
+                  </button>
+                  <button 
+                    type="button" 
+                    onClick={() => setCurrentTab('dashboard')} 
+                    className="bg-slate-100 hover:bg-slate-200 text-slate-700 py-2.5 px-4 rounded-lg cursor-pointer"
+                  >
+                    Cancelar
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        );
       default:
         return (
           <div className="p-12 text-center text-slate-400 font-sans">
@@ -471,7 +603,6 @@ export default function App() {
         {/* CONTENEDOR DE ESCENA PRINCIPAL */}
         <div id="main-scene-body" className="flex-grow flex flex-col min-w-0 overflow-hidden relative">
           
-          {/* ENCABEZADO DE NAVEGACIÓN */}
           <Header 
             currentTab={currentTab}
             setCurrentTab={setCurrentTab}
@@ -487,6 +618,8 @@ export default function App() {
             patients={patients}
             selectedPatientId={selectedPatientId}
             setSelectedPatientId={setSelectedPatientId}
+            notifications={notifications}
+            setNotifications={setNotifications}
           />
 
           {/* VISTA DINÁMICA ACTIVA */}

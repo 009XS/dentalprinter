@@ -185,7 +185,7 @@ export default function DashboardView({
       </div>
 
       {/* Bento Grid de Indicadores (KPIs) */}
-      <div id="kpi-bento-grid" className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div id="kpi-bento-grid" className="grid grid-cols-1 md:grid-cols-2 gap-6">
         
         {/* KPI 1 - Pacientes Totales */}
         <div className="bg-white/80 dark:bg-slate-800/80 backdrop-blur-md rounded-xl p-6 border border-[#c4c7c8]/40 dark:border-slate-700/60 relative overflow-hidden group hover:border-blue-600 transition-all duration-300">
@@ -202,22 +202,7 @@ export default function DashboardView({
           </div>
         </div>
 
-        {/* KPI 2 - Ingresos Mensuales */}
-        <div className="bg-white/80 dark:bg-slate-800/80 backdrop-blur-md rounded-xl p-6 border border-[#c4c7c8]/40 dark:border-slate-700/60 relative overflow-hidden group hover:border-blue-600 transition-all duration-300">
-          <div className="absolute -right-4 -top-4 w-24 h-24 bg-blue-600/5 rounded-full blur-xl group-hover:scale-110 transition-transform"></div>
-          <div className="flex items-center justify-between mb-4">
-            <span className="font-sans font-bold text-xs uppercase tracking-wider text-[#444748] dark:text-slate-400">Ingresos Estimados</span>
-            <DollarSign className="w-9 h-9 text-blue-600 dark:text-blue-400 bg-blue-600/10 dark:bg-blue-400/10 p-2 rounded-lg" />
-          </div>
-          <div className="flex items-end gap-2.5">
-            <span className="font-serif text-3xl font-bold text-[#181c1e] dark:text-white">${totalFinancialEstimate.toLocaleString()}</span>
-            <span className="font-sans text-xs font-semibold text-emerald-600 bg-emerald-100 dark:bg-emerald-950/30 px-2 py-0.5 rounded-full flex items-center mb-1">
-              <TrendingUp className="w-3.5 h-3.5 mr-0.5 shrink-0" /> Mes Actual
-            </span>
-          </div>
-        </div>
-
-        {/* KPI 3 - Citas de Hoy */}
+        {/* KPI 2 - Citas de Hoy */}
         <div className="bg-white/80 dark:bg-slate-800/80 backdrop-blur-md rounded-xl p-6 border border-[#c4c7c8]/40 dark:border-slate-700/60 relative overflow-hidden group hover:border-blue-600 transition-all duration-300">
           <div className="absolute -right-4 -top-4 w-24 h-24 bg-red-500/5 rounded-full blur-xl group-hover:scale-110 transition-transform"></div>
           <div className="flex items-center justify-between mb-4">
