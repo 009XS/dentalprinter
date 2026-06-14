@@ -177,7 +177,7 @@ export default function DashboardView({
       {/* Encabezado */}
       <div id="greeting-header">
         <h2 className="font-serif text-3xl md:text-5xl font-bold text-slate-900 dark:text-white leading-tight">
-          Buenos días, Dr. Pérez
+          Buenos días, Dr. Juan Carlos
         </h2>
         <p className="font-sans text-sm md:text-base text-[#444748] dark:text-slate-400 mt-1">
           Aquí está el resumen de la clínica para el día de hoy.

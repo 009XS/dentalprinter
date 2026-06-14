@@ -164,7 +164,7 @@ export default function OdontogramaView({
     const newInt = {
       id: String(Date.now()),
       title: `Diente ${selectedTooth} - ${procDesc}`,
-      desc: `Hoy • Dr. Administrador`,
+      desc: `Hoy • Dr. Juan Carlos`,
       type: 'healthy' as const
     };
 

@@ -202,7 +202,7 @@ export default function App() {
   // Chat del Asistente de IA (simulado)
   const [aiChatQuery, setAiChatQuery] = useState('');
   const [aiMessages, setAiMessages] = useState<Array<{ sender: 'ai' | 'user'; text: string }>>([
-    { sender: 'ai', text: "¡Hola Dr. Pérez! Noté que hay 2 pacientes que no han confirmado sus citas de mañana. ¿Desea que envíe recordatorios automáticos por WhatsApp?" }
+    { sender: 'ai', text: "¡Hola Dr. Juan Carlos! Noté que hay 2 pacientes que no han confirmado sus citas de mañana. ¿Desea que envíe recordatorios automáticos por WhatsApp?" }
   ]);
 
   const handleAiAsk = (e: FormEvent) => {
@@ -587,7 +587,7 @@ export default function App() {
                   className="w-9 h-9 rounded-full object-cover border"
                 />
                 <div className="text-left font-sans text-xs flex-grow min-w-0">
-                  <p className="font-bold truncate">Dr. Pérez</p>
+                  <p className="font-bold truncate">Dr. Juan Carlos</p>
                   <p className="text-[10px] text-slate-400 truncate">Director Médico Administrador</p>
                 </div>
                 <button 
@@ -689,7 +689,7 @@ export default function App() {
                       onChange={(e) => setNewApptDoctor(e.target.value as any)}
                       className="w-full border border-slate-200 dark:border-slate-800 rounded-lg p-2.5 bg-white dark:bg-slate-900 text-slate-855 dark:text-white"
                     >
-                      <option value="Dr. Pérez">Dr. Pérez (General)</option>
+                      <option value="Dr. Pérez">Dr. Juan Carlos (General)</option>
                       <option value="Dra. Gómez">Dra. Gómez (Ortodoncia)</option>
                       <option value="Higiene 1">Higiene 1 (Limpieza)</option>
                     </select>

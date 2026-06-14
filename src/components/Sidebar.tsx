@@ -43,7 +43,7 @@ export default function Sidebar({
   const getProfile = () => {
     if (currentTab === 'patients') {
       return {
-        name: 'Dr. Administrador',
+        name: 'Dr. Juan Carlos',
         role: 'Director Clínico',
         avatar: 'https://lh3.googleusercontent.com/aida-public/AB6AXuAszXuFy1xB42lWd4FL4Js326XUsuLh1JD8tlmzIhhBJH6L6E9g2TP9JH8m3kjUchgvZ4E-seKzO2oH_bBdrYZpXe7x64SRd5d4ZC4SdhyWKwxHd4tTofavR2HyQCYR-tLA0Z-jIwF8cW2jHqxlsTZoAc-vaXnthl4Rk0RNUhXV6mDs_ZHlz35F74dULM998FO5TRmeePUe7ILG2i_3fMVMKmXJobskRgPQC4S_hzmc46rAENzE44QGk--m0ANIj1dG8brMAGqtHlxH'
       };
@@ -55,7 +55,7 @@ export default function Sidebar({
       };
     } else {
       return {
-        name: 'Dr. Pérez',
+        name: 'Dr. Juan Carlos',
         role: 'Director Médico Administrador',
         avatar: 'https://lh3.googleusercontent.com/aida-public/AB6AXuD9qY-Yo00VAQICr4JJ8sjr3bcyW73OqlAdbBL9K4aJ_-wBiYeiysx1fXFCtu99EFQa6EpLb2qGz4s5SfjPUA6ZTbjTSL-Akpy6FN6Nt4hFvkGbnaEwGlVPKjFgm3AWpZOTFQjguy3fRw0SgjZSPVX2W05e7En8MD6QtvEp7m7TzcBTx5onCAnTOYoK_Y-_cqzgQl7DvHnbdGPKzFJiYU8UklBZbmdBYGUYHteTQBNG4dxOaOgY4ndRj5h8ZqjWErnu8F-O0TgNPwRQ'
       };
@@ -69,8 +69,13 @@ export default function Sidebar({
       id="main-sidebar"
       className="hidden md:flex flex-col h-screen w-[280px] shrink-0 border-r border-[#ebeef0] dark:border-slate-800 bg-white dark:bg-slate-900 py-6 px-4 sticky top-0 left-0 z-30 transition-colors duration-300"
     >
-      {/* Encabezado de Marca */}
-      <div className="mb-6 flex flex-col px-2">
+      {/* Logo y Encabezado de Marca */}
+      <div className="mb-6 flex flex-col items-center px-2">
+        <img 
+          src="/clinic-logo.jpg" 
+          alt="Logo de la Clínica" 
+          className="w-20 h-20 rounded-2xl object-cover border-2 border-blue-100 dark:border-slate-700 shadow-md mb-3"
+        />
         <h1 className="font-serif text-3xl font-bold text-blue-600 dark:text-blue-400 tracking-tight">
           Dentalprinter
         </h1>
