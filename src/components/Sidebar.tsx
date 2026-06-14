@@ -15,6 +15,7 @@ interface SidebarProps {
   currentTab: string;
   setCurrentTab: (tab: string) => void;
   onOpenAppointmentModal: () => void;
+  onOpenPatientModal: () => void;
   notificationsCount: number;
   onLogout?: () => void;
 }
@@ -23,6 +24,7 @@ export default function Sidebar({
   currentTab, 
   setCurrentTab, 
   onOpenAppointmentModal, 
+  onOpenPatientModal, 
   notificationsCount,
   onLogout
 }: SidebarProps) {
@@ -77,15 +79,25 @@ export default function Sidebar({
         </p>
       </div>
 
-      {/* Acción Principal */}
-      <button 
-        id="btn-sidebar-new-appt"
-        onClick={onOpenAppointmentModal}
-        className="w-full bg-blue-600 hover:bg-blue-700 text-white dark:bg-blue-500 dark:hover:bg-blue-600 font-sans font-bold text-xs uppercase tracking-wider py-3 px-4 rounded-lg shadow-sm flex items-center justify-center gap-2 transform active:scale-98 transition-all duration-150 mb-6 cursor-pointer"
-      >
-        <Plus className="w-4 h-4 stroke-[2.5]" />
-        Nueva Cita
-      </button>
+      {/* Acciones Principales */}
+      <div className="flex flex-col gap-2 mb-6">
+        <button 
+          id="btn-sidebar-new-appt"
+          onClick={onOpenAppointmentModal}
+          className="w-full bg-blue-600 hover:bg-blue-700 text-white dark:bg-blue-500 dark:hover:bg-blue-600 font-sans font-bold text-xs uppercase tracking-wider py-2.5 px-4 rounded-lg shadow-sm flex items-center justify-center gap-2 transform active:scale-98 transition-all duration-150 cursor-pointer"
+        >
+          <Plus className="w-4 h-4 stroke-[2.5]" />
+          Nueva Cita
+        </button>
+        <button 
+          id="btn-sidebar-new-patient"
+          onClick={onOpenPatientModal}
+          className="w-full bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700 border border-slate-250 dark:border-slate-700 font-sans font-bold text-xs uppercase tracking-wider py-2.5 px-4 rounded-lg shadow-sm flex items-center justify-center gap-2 transform active:scale-98 transition-all duration-150 cursor-pointer"
+        >
+          <Plus className="w-4 h-4 stroke-[2.5]" />
+          Nuevo Paciente
+        </button>
+      </div>
 
       {/* Enlaces de Navegación Principal */}
       <nav id="sidebar-nav" className="flex-1 space-y-1.5 overflow-y-auto pr-1">

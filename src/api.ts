@@ -67,6 +67,12 @@ export async function bootstrap() {
       patientName: b.patient?.name || 'Paciente'
     }));
   }
+  if (data.chats) {
+    data.chats = data.chats.map((c: any) => ({
+      ...c,
+      name: c.patientName
+    }));
+  }
   return data;
 }
 
@@ -129,4 +135,20 @@ export async function saveSettings(settings: any) {
 
 export async function markNotificationsRead() {
   return request<void>('/notifications/read-all', { method: 'POST' });
+}
+
+export async function getAuditLogs() {
+  return request<any[]>('/audit-logs');
+}
+
+export async function updateChat(id: string, input: {
+  lastMessage: string;
+  time: string;
+  isNew: boolean;
+  messages: any[];
+  patientName?: string;
+  initials?: string;
+  avatar?: string;
+}) {
+  return request<any>(`/chats/${id}`, { method: 'PUT', body: JSON.stringify(input) });
 }

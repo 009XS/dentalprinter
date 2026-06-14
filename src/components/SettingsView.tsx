@@ -7,14 +7,23 @@ import {
   Sliders, 
   CheckCircle2
 } from 'lucide-react';
-import { getSettings, saveSettings } from '../api';
+import { getSettings, saveSettings, getAuditLogs } from '../api';
 
-export default function SettingsView() {
+export default function SettingsView({ userRole }: { userRole?: string }) {
   const [clinicName, setClinicName] = useState('Dentalprinter');
   const [tagline, setTagline] = useState('Excelencia Clínica');
   const [notationSystem, setNotationSystem] = useState<'universal' | 'fdi'>('universal');
   const [whatsAppNum, setWhatsAppNum] = useState('+1 (555) 0123-DENTAL');
   const [savedSuccess, setSavedSuccess] = useState(false);
+  const [auditLogs, setAuditLogs] = useState<any[]>([]);
+
+  useEffect(() => {
+    if (userRole === 'admin') {
+      getAuditLogs()
+        .then((logs) => setAuditLogs(logs || []))
+        .catch((err) => console.error('Error al cargar logs de auditoría:', err));
+    }
+  }, [userRole]);
 
   useEffect(() => {
     getSettings()
@@ -192,6 +201,60 @@ export default function SettingsView() {
         </div>
 
       </form>
+
+      {/* REGISTRO DE AUDITORÍA DE SEGURIDAD */}
+      {userRole === 'admin' && (
+        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-6 mt-6 shadow-xs font-sans text-xs">
+          <h3 className="font-sans font-bold text-base text-slate-900 dark:text-white mb-4 flex items-center gap-2">
+            <Shield className="w-5 h-5 text-red-500" />
+            Registro de Auditoría de Seguridad (Solo Administradores)
+          </h3>
+          <p className="text-[#444748] dark:text-slate-400 text-xs mb-4">
+            El sistema registra automáticamente todas las acciones administrativas críticas para garantizar el cumplimiento normativo.
+          </p>
+          
+          <div className="overflow-x-auto border border-slate-100 dark:border-slate-850 rounded-lg">
+            <table className="w-full text-left text-xs border-collapse">
+              <thead>
+                <tr className="bg-slate-50 dark:bg-slate-800/40 text-slate-450 text-[10px] uppercase font-bold border-b border-slate-100 dark:border-slate-800">
+                  <th className="py-2.5 px-4">Fecha / Hora</th>
+                  <th className="py-2.5 px-4">Usuario</th>
+                  <th className="py-2.5 px-4">Acción</th>
+                  <th className="py-2.5 px-4">Entidad</th>
+                  <th className="py-2.5 px-4">ID Entidad</th>
+                  <th className="py-2.5 px-4">Dirección IP</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100 dark:divide-slate-800/80">
+                {auditLogs.length === 0 ? (
+                  <tr>
+                    <td colSpan={6} className="py-6 px-4 text-center text-slate-400 dark:text-slate-500">
+                      No hay registros de auditoría en la clínica aún.
+                    </td>
+                  </tr>
+                ) : (
+                  auditLogs.map((log: any) => (
+                    <tr key={log.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/20 text-slate-700 dark:text-slate-300">
+                      <td className="py-2.5 px-4 font-mono text-[10px]">{new Date(log.createdAt).toLocaleString()}</td>
+                      <td className="py-2.5 px-4 font-semibold">{log.actorEmail}</td>
+                      <td className="py-2.5 px-4">
+                        <span className="px-2 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider bg-blue-50 dark:bg-blue-950/30 text-blue-600 dark:text-blue-400">
+                          {log.action}
+                        </span>
+                      </td>
+                      <td className="py-2.5 px-4 font-mono text-[10px]">{log.entityType}</td>
+                      <td className="py-2.5 px-4 font-mono text-[10px] truncate max-w-[120px]" title={log.entityId}>
+                        {log.entityId || '-'}
+                      </td>
+                      <td className="py-2.5 px-4 font-mono text-[10px]">{log.ip || 'Local'}</td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
 
     </div>
   );

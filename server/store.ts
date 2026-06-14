@@ -9,7 +9,60 @@ async function ensureSeeded() {
   const userCount = await prisma.user.count();
   if (userCount > 0) return;
   const seed = await createSeedData();
-  await writeData(seed);
+  await prisma.$transaction(async (tx) => {
+    if (seed.users.length) await tx.user.createMany({ data: seed.users });
+    if (seed.patients.length) await tx.patient.createMany({ data: seed.patients });
+    if (seed.appointments.length) await tx.appointment.createMany({ data: seed.appointments });
+    if (seed.chats.length) {
+      await tx.chat.createMany({
+        data: seed.chats.map((chat) => ({
+          id: chat.id,
+          patientName: chat.patientName,
+          initials: chat.initials,
+          avatar: chat.avatar,
+          lastMessage: chat.lastMessage,
+          time: chat.time,
+          isNew: chat.isNew,
+          messages: JSON.stringify(chat.messages),
+          updatedAt: chat.updatedAt,
+        })),
+      });
+    }
+    for (const budget of seed.budgets) {
+      await tx.budget.create({
+        data: {
+          id: budget.id,
+          patientId: budget.patientId!,
+          status: budget.status,
+          discountPercent: budget.discountPercent,
+          createdAt: budget.createdAt,
+          updatedAt: budget.updatedAt,
+          items: {
+            create: budget.items.map((item) => ({
+              id: item.id!,
+              code: item.code,
+              description: item.description,
+              tooth: item.tooth,
+              unitPrice: item.unitPrice,
+              total: item.total,
+            })),
+          },
+        },
+      });
+    }
+    for (const odontogram of seed.odontograms) {
+      await tx.odontogram.create({
+        data: {
+          patientId: odontogram.patientId,
+          teeth: JSON.stringify(odontogram.teeth),
+          interventions: JSON.stringify(odontogram.interventions),
+          updatedAt: odontogram.updatedAt,
+        },
+      });
+    }
+    if (seed.notifications.length) await tx.notification.createMany({ data: seed.notifications });
+    await tx.clinicSettings.create({ data: { id: 'singleton', ...seed.settings } });
+  });
 }
 
 function mapUser(user: Awaited<ReturnType<typeof prisma.user.findMany>>[number]): User {
@@ -113,80 +166,4 @@ export async function readData(): Promise<ClinicData> {
       updatedAt: toIso(settings.updatedAt),
     } : (await createSeedData()).settings,
   };
-}
-
-export async function writeData(next: ClinicData): Promise<ClinicData> {
-  await prisma.$transaction(async (tx) => {
-    await tx.auditLog.deleteMany();
-    await tx.notification.deleteMany();
-    await tx.budgetItem.deleteMany();
-    await tx.budget.deleteMany();
-    await tx.appointment.deleteMany();
-    await tx.odontogram.deleteMany();
-    await tx.chat.deleteMany();
-    await tx.patient.deleteMany();
-    await tx.user.deleteMany();
-    await tx.clinicSettings.deleteMany();
-
-    if (next.users.length) await tx.user.createMany({ data: next.users });
-    if (next.patients.length) await tx.patient.createMany({ data: next.patients });
-    if (next.appointments.length) await tx.appointment.createMany({ data: next.appointments });
-    if (next.chats.length) {
-      await tx.chat.createMany({
-        data: next.chats.map((chat) => ({
-          id: chat.id,
-          patientName: chat.patientName,
-          initials: chat.initials,
-          avatar: chat.avatar,
-          lastMessage: chat.lastMessage,
-          time: chat.time,
-          isNew: chat.isNew,
-          messages: JSON.stringify(chat.messages),
-          updatedAt: chat.updatedAt,
-        })),
-      });
-    }
-    for (const budget of next.budgets) {
-      await tx.budget.create({
-        data: {
-          id: budget.id,
-          patientId: budget.patientId!,
-          status: budget.status,
-          discountPercent: budget.discountPercent,
-          createdAt: budget.createdAt,
-          updatedAt: budget.updatedAt,
-          items: {
-            create: budget.items.map((item) => ({
-              id: item.id!,
-              code: item.code,
-              description: item.description,
-              tooth: item.tooth,
-              unitPrice: item.unitPrice,
-              total: item.total,
-            })),
-          },
-        },
-      });
-    }
-    for (const odontogram of next.odontograms) {
-      await tx.odontogram.create({
-        data: {
-          patientId: odontogram.patientId,
-          teeth: JSON.stringify(odontogram.teeth),
-          interventions: JSON.stringify(odontogram.interventions),
-          updatedAt: odontogram.updatedAt,
-        },
-      });
-    }
-    if (next.notifications.length) await tx.notification.createMany({ data: next.notifications });
-    if (next.auditLogs.length) await tx.auditLog.createMany({ data: next.auditLogs });
-    await tx.clinicSettings.create({ data: { id: 'singleton', ...next.settings } });
-  });
-  return readData();
-}
-
-export async function updateData(mutator: (data: ClinicData) => void | ClinicData): Promise<ClinicData> {
-  const data = await readData();
-  const result = mutator(data);
-  return writeData(result || data);
 }

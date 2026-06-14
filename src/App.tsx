@@ -23,7 +23,7 @@ import OdontogramaView from './components/OdontogramaView';
 import PresupuestosView from './components/PresupuestosView';
 import RadiologyView from './components/RadiologyView';
 import SettingsView from './components/SettingsView';
-import { getToken, setToken, bootstrap, login, logout, createAppointment } from './api';
+import { getToken, setToken, bootstrap, login, logout, createAppointment, createPatient } from './api';
 
 export default function App() {
   // Enrutamiento de vistas y estados globales
@@ -109,8 +109,45 @@ export default function App() {
 
   // Modales e interfaces emergentes
   const [appointmentModalOpen, setAppointmentModalOpen] = useState(false);
+  const [patientModalOpen, setPatientModalOpen] = useState(false);
   const [aiAssistantOpen, setAiAssistantOpen] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
+  // Formulario de nuevo paciente
+  const [newPatName, setNewPatName] = useState('');
+  const [newPatDob, setNewPatDob] = useState('');
+  const [newPatAge, setNewPatAge] = useState(30);
+  const [newPatPhone, setNewPatPhone] = useState('');
+  const [newPatAllergies, setNewPatAllergies] = useState('');
+  const [newPatRiskLevel, setNewPatRiskLevel] = useState<'Bajo Riesgo' | 'Medio Riesgo' | 'Alto Riesgo'>('Bajo Riesgo');
+
+  const handleCreatePatient = async (e: FormEvent) => {
+    e.preventDefault();
+    try {
+      const initials = newPatName.trim().split(/\s+/).map(w => w[0]).join('').toUpperCase().slice(0, 2) || 'P';
+      const created = await createPatient({
+        name: newPatName,
+        initials,
+        dob: newPatDob,
+        age: newPatAge,
+        phone: newPatPhone,
+        allergies: newPatAllergies || undefined,
+        riskLevel: newPatRiskLevel,
+      });
+      setPatients([created, ...patients]);
+      setSelectedPatientId(created.id);
+      setPatientModalOpen(false);
+      setNewPatName('');
+      setNewPatDob('');
+      setNewPatAge(30);
+      setNewPatPhone('');
+      setNewPatAllergies('');
+      setNewPatRiskLevel('Bajo Riesgo');
+      alert(`¡Paciente "${created.name}" registrado correctamente y seleccionado como activo!`);
+    } catch (err: any) {
+      alert(`Error al registrar paciente: ${err.message}`);
+    }
+  };
 
   // Agregar un tratamiento diagnosticado en Odontograma al plan del paciente activo
   const handleAddTreatmentItem = (item: BudgetItem) => {
@@ -242,7 +279,7 @@ export default function App() {
       case 'radiology':
         return <RadiologyView />;
       case 'settings':
-        return <SettingsView />;
+        return <SettingsView userRole={user?.role} />;
       default:
         return (
           <div className="p-12 text-center text-slate-400 font-sans">
@@ -341,6 +378,7 @@ export default function App() {
             setMobileMenuOpen(false);
           }}
           onOpenAppointmentModal={() => setAppointmentModalOpen(true)}
+          onOpenPatientModal={() => setPatientModalOpen(true)}
           notificationsCount={notificationsCount}
           onLogout={handleLogout}
         />
@@ -357,16 +395,28 @@ export default function App() {
                   </button>
                 </div>
                 
-                <button 
-                  onClick={() => {
-                    setAppointmentModalOpen(true);
-                    setMobileMenuOpen(false);
-                  }}
-                  className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs uppercase tracking-wider py-2.5 rounded-lg flex items-center justify-center gap-2 cursor-pointer transition-colors"
-                >
-                  <Plus className="w-4 h-4" />
-                  Nueva Cita
-                </button>
+                <div className="flex flex-col gap-2">
+                  <button 
+                    onClick={() => {
+                      setAppointmentModalOpen(true);
+                      setMobileMenuOpen(false);
+                    }}
+                    className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs uppercase tracking-wider py-2.5 rounded-lg flex items-center justify-center gap-2 cursor-pointer transition-colors"
+                  >
+                    <Plus className="w-4 h-4" />
+                    Nueva Cita
+                  </button>
+                  <button 
+                    onClick={() => {
+                      setPatientModalOpen(true);
+                      setMobileMenuOpen(false);
+                    }}
+                    className="w-full bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:bg-slate-50 border border-slate-250 dark:border-slate-700 font-bold text-xs uppercase tracking-wider py-2.5 rounded-lg flex items-center justify-center gap-2 cursor-pointer transition-colors"
+                  >
+                    <Plus className="w-4 h-4" />
+                    Nuevo Paciente
+                  </button>
+                </div>
 
                 <nav className="space-y-2">
                   {[
@@ -434,6 +484,9 @@ export default function App() {
             onTriggerAIAssistant={() => setAiAssistantOpen(true)}
             mobileMenuOpen={mobileMenuOpen}
             setMobileMenuOpen={setMobileMenuOpen}
+            patients={patients}
+            selectedPatientId={selectedPatientId}
+            setSelectedPatientId={setSelectedPatientId}
           />
 
           {/* VISTA DINÁMICA ACTIVA */}
@@ -542,6 +595,129 @@ export default function App() {
                   <button 
                     type="button"
                     onClick={() => setAppointmentModalOpen(false)}
+                    className="bg-slate-100 hover:bg-slate-200 text-slate-700 py-2.5 px-4 rounded-lg cursor-pointer transition-colors"
+                  >
+                    Cancelar
+                  </button>
+                </div>
+
+              </form>
+
+            </div>
+          </div>
+        )}
+
+        {/* MODAL DE NUEVO PACIENTE */}
+        {patientModalOpen && (
+          <div className="fixed inset-0 bg-slate-950/50 backdrop-blur-xs flex items-center justify-center z-50 p-4">
+            <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-6 max-w-md w-full shadow-2xl animate-in zoom-in-95 duration-120 font-sans text-xs">
+              
+              {/* Encabezado del Modal */}
+              <div className="flex justify-between items-center pb-3 border-b border-slate-100 dark:border-slate-800 mb-4">
+                <h3 className="text-sm font-bold text-slate-900 dark:text-white uppercase tracking-wider flex items-center gap-1.5">
+                  <Users className="w-5 h-5 text-blue-600 dark:text-blue-450" />
+                  Registrar Nuevo Paciente
+                </h3>
+                <button 
+                  onClick={() => setPatientModalOpen(false)}
+                  className="text-slate-400 hover:text-slate-600 dark:hover:text-white shrink-0 cursor-pointer"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              {/* Formulario */}
+              <form onSubmit={handleCreatePatient} className="space-y-4 font-sans text-xs">
+                
+                {/* Nombre completo */}
+                <div>
+                  <label className="block text-[10px] font-sans font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1">Nombre Completo</label>
+                  <input 
+                    type="text" 
+                    value={newPatName}
+                    onChange={(e) => setNewPatName(e.target.value)}
+                    className="w-full border border-slate-200 dark:border-slate-800 rounded-lg p-2.5 bg-white dark:bg-slate-900 text-slate-850 dark:text-white outline-none focus:border-blue-600" 
+                    placeholder="Ej. Juan Pérez Gómez"
+                    required
+                  />
+                </div>
+
+                {/* Fecha de Nacimiento y Edad */}
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-[10px] font-sans font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1">Fecha de Nacimiento</label>
+                    <input 
+                      type="text" 
+                      value={newPatDob}
+                      onChange={(e) => setNewPatDob(e.target.value)}
+                      className="w-full border border-slate-200 dark:border-slate-800 rounded-lg p-2.5 bg-white dark:bg-slate-900 text-slate-850 dark:text-white outline-none focus:border-blue-600" 
+                      placeholder="Ej. 12 Oct 1985"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[10px] font-sans font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1">Edad</label>
+                    <input 
+                      type="number" 
+                      value={newPatAge}
+                      onChange={(e) => setNewPatAge(Number(e.target.value))}
+                      className="w-full border border-slate-200 dark:border-slate-800 rounded-lg p-2.5 bg-white dark:bg-slate-900 text-slate-850 dark:text-white outline-none focus:border-blue-600" 
+                      min={0}
+                      max={130}
+                      required
+                    />
+                  </div>
+                </div>
+
+                {/* Teléfono */}
+                <div>
+                  <label className="block text-[10px] font-sans font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1">Teléfono</label>
+                  <input 
+                    type="text" 
+                    value={newPatPhone}
+                    onChange={(e) => setNewPatPhone(e.target.value)}
+                    className="w-full border border-slate-200 dark:border-slate-800 rounded-lg p-2.5 bg-white dark:bg-slate-900 text-slate-855 dark:text-white outline-none focus:border-blue-600" 
+                    placeholder="Ej. +52 55 1234 5678"
+                    required
+                  />
+                </div>
+
+                {/* Alergias */}
+                <div>
+                  <label className="block text-[10px] font-sans font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1">Alergias (Opcional)</label>
+                  <input 
+                    type="text" 
+                    value={newPatAllergies}
+                    onChange={(e) => setNewPatAllergies(e.target.value)}
+                    className="w-full border border-slate-200 dark:border-slate-800 rounded-lg p-2.5 bg-white dark:bg-slate-900 text-slate-855 dark:text-white outline-none focus:border-blue-600" 
+                    placeholder="Ej. Látex, Penicilina (dejar vacío si no tiene)"
+                  />
+                </div>
+
+                {/* Nivel de Riesgo */}
+                <div>
+                  <label className="block text-[10px] font-sans font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1">Nivel de Riesgo Clínico</label>
+                  <select 
+                    value={newPatRiskLevel}
+                    onChange={(e) => setNewPatRiskLevel(e.target.value as any)}
+                    className="w-full border border-slate-200 dark:border-slate-800 rounded-lg p-2.5 bg-white dark:bg-slate-900 text-slate-855 dark:text-white outline-none focus:border-blue-600"
+                  >
+                    <option value="Bajo Riesgo">Bajo Riesgo</option>
+                    <option value="Medio Riesgo">Medio Riesgo</option>
+                    <option value="Alto Riesgo">Alto Riesgo</option>
+                  </select>
+                </div>
+
+                <div className="flex justify-end gap-2.5 pt-4">
+                  <button 
+                    type="submit"
+                    className="flex-grow bg-blue-600 hover:bg-blue-700 text-white font-sans font-bold py-2.5 px-4 rounded-lg uppercase cursor-pointer transition-colors"
+                  >
+                    Registrar Paciente
+                  </button>
+                  <button 
+                    type="button"
+                    onClick={() => setPatientModalOpen(false)}
                     className="bg-slate-100 hover:bg-slate-200 text-slate-700 py-2.5 px-4 rounded-lg cursor-pointer transition-colors"
                   >
                     Cancelar

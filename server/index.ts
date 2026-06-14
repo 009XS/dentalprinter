@@ -7,7 +7,8 @@ import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { v4 as uuid } from 'uuid';
 import { z } from 'zod';
-import { readData, updateData } from './store';
+import { readData } from './store';
+import { prisma } from './db';
 import type { Appointment, Budget, BudgetItem, Doctor, Patient, Role, User } from './types';
 
 const app = express();
@@ -71,32 +72,28 @@ function requireRole(...roles: Role[]) {
 
 async function audit(req: AuthRequest, action: string, entityType: string, entityId?: string) {
   if (!req.user) return;
-  await updateData((data) => {
-    data.auditLogs.unshift({
+  await prisma.auditLog.create({
+    data: {
       id: uuid(),
-      actorId: req.user!.id,
-      actorEmail: req.user!.email,
+      actorId: req.user.id,
+      actorEmail: req.user.email,
       action,
       entityType,
-      entityId,
-      ip: req.ip,
-      createdAt: now(),
-    });
-    data.auditLogs = data.auditLogs.slice(0, 1000);
+      entityId: entityId || null,
+      ip: req.ip || null,
+    }
   });
 }
 
 async function notify(title: string, desc: string) {
-  await updateData((data) => {
-    data.notifications.unshift({
+  await prisma.notification.create({
+    data: {
       id: uuid(),
       title,
       desc,
       time: relativeTimeLabel(),
       read: false,
-      createdAt: now(),
-    });
-    data.notifications = data.notifications.slice(0, 100);
+    }
   });
 }
 
@@ -144,155 +141,233 @@ app.post('/api/auth/login', asyncHandler(async (req, res) => {
     email: z.string().email(),
     password: z.string().min(8),
   }).parse(req.body);
-  const data = await readData();
-  const user = data.users.find((u) => u.email.toLowerCase() === body.email.toLowerCase());
+  
+  const user = await prisma.user.findUnique({ where: { email: body.email.toLowerCase() } });
   if (!user || !(await bcrypt.compare(body.password, user.passwordHash))) {
     return res.status(401).json({ error: 'Invalid credentials' });
   }
-  const token = signUser(user);
+  
+  const token = signUser({
+    id: user.id,
+    name: user.name,
+    email: user.email,
+    passwordHash: user.passwordHash,
+    role: user.role as Role,
+    createdAt: user.createdAt.toISOString()
+  });
+  
   res.json({ token, user: { id: user.id, name: user.name, email: user.email, role: user.role } });
 }));
 
 app.get('/api/bootstrap', requireAuth, asyncHandler(async (_req, res) => {
   const data = await readData();
-  const patientsById = new Map(data.patients.map((p) => [p.id, p]));
-  res.json({
-    user: (_req as AuthRequest).user,
-    patients: data.patients,
-    appointments: data.appointments.map((a) => ({ ...a, patient: patientsById.get(a.patientId) })),
-    chats: data.chats,
-    budgets: data.budgets.map((b) => ({ ...b, patient: patientsById.get(b.patientId) })),
-    odontograms: data.odontograms,
-    notifications: data.notifications,
-    settings: data.settings,
-  });
+  res.json(data);
 }));
 
 app.get('/api/patients', requireAuth, asyncHandler(async (_req, res) => {
-  const data = await readData();
-  res.json(data.patients);
+  const patients = await prisma.patient.findMany({ orderBy: { createdAt: 'asc' } });
+  res.json(patients);
 }));
 
 app.post('/api/patients', requireAuth, requireRole('admin', 'doctor', 'recepcionista'), asyncHandler(async (req, res) => {
   const body = patientSchema.parse(req.body);
-  let created: Patient | undefined;
-  await updateData((data) => {
-    const id = `DP-${new Date().getFullYear()}-${uuid().slice(0, 8).toUpperCase()}`;
-    created = { id, ...body, createdAt: now(), updatedAt: now() };
-    data.patients.push(created);
+  const id = `DP-${new Date().getFullYear()}-${uuid().slice(0, 8).toUpperCase()}`;
+  
+  const created = await prisma.patient.create({
+    data: {
+      id,
+      name: body.name,
+      initials: body.initials,
+      dob: body.dob,
+      age: body.age,
+      phone: body.phone,
+      allergies: body.allergies || null,
+      riskLevel: body.riskLevel,
+    }
   });
-  await audit(req, 'create', 'patient', created?.id);
-  await notify('Nueva ficha de paciente', `Se creó el expediente de ${created?.name} en la clínica.`);
+
+  await audit(req, 'create', 'patient', created.id);
+  await notify('Nueva ficha de paciente', `Se creó el expediente de ${created.name} en la clínica.`);
+  
   res.status(201).json(created);
 }));
 
 app.put('/api/patients/:id', requireAuth, requireRole('admin', 'doctor', 'recepcionista'), asyncHandler(async (req, res) => {
   const body = patientSchema.partial().parse(req.body);
-  let updated: Patient | undefined;
-  await updateData((data) => {
-    const index = data.patients.findIndex((p) => p.id === req.params.id);
-    if (index === -1) return;
-    data.patients[index] = { ...data.patients[index], ...body, updatedAt: now() };
-    updated = data.patients[index];
+  
+  const updated = await prisma.patient.update({
+    where: { id: req.params.id },
+    data: {
+      ...body,
+      allergies: body.allergies !== undefined ? (body.allergies || null) : undefined,
+    }
   });
-  if (!updated) return res.status(404).json({ error: 'Paciente no encontrado' });
+
   await audit(req, 'update', 'patient', updated.id);
   res.json(updated);
 }));
 
 app.get('/api/appointments', requireAuth, asyncHandler(async (_req, res) => {
-  const data = await readData();
-  const patientsById = new Map(data.patients.map((p) => [p.id, p]));
-  res.json(data.appointments.map((a) => ({ ...a, patient: patientsById.get(a.patientId) })));
+  const appointments = await prisma.appointment.findMany({
+    include: { patient: true },
+    orderBy: { createdAt: 'asc' }
+  });
+  res.json(appointments);
 }));
 
 app.post('/api/appointments', requireAuth, requireRole('admin', 'doctor', 'recepcionista'), asyncHandler(async (req, res) => {
   const body = appointmentSchema.parse(req.body);
-  let created: Appointment | undefined;
-  await updateData((data) => {
-    if (!data.patients.some((p) => p.id === body.patientId)) throw Object.assign(new Error('Paciente no encontrado'), { status: 404 });
-    const overlaps = data.appointments.some((a) =>
-      a.doctor === body.doctor &&
-      a.status !== 'Cancelada' &&
-      body.startHour < a.startHour + a.durationHours &&
-      body.startHour + body.durationHours > a.startHour
-    );
-    if (overlaps) throw Object.assign(new Error('La cita se traslapa con una reservación existente'), { status: 409 });
-    created = { id: uuid(), ...body, doctor: body.doctor as Doctor, createdAt: now(), updatedAt: now() };
-    data.appointments.push(created);
+  
+  const patientExists = await prisma.patient.findUnique({ where: { id: body.patientId } });
+  if (!patientExists) {
+    return res.status(404).json({ error: 'Paciente no encontrado' });
+  }
+
+  // Verificar solapamiento para el mismo doctor y citas activas (no canceladas)
+  const doctorAppointments = await prisma.appointment.findMany({
+    where: {
+      doctor: body.doctor,
+      status: { not: 'Cancelada' }
+    }
   });
-  await audit(req, 'create', 'appointment', created?.id);
+
+  const overlaps = doctorAppointments.some((a) =>
+    body.startHour < a.startHour + a.durationHours &&
+    body.startHour + body.durationHours > a.startHour
+  );
+
+  if (overlaps) {
+    return res.status(409).json({ error: 'La cita se traslapa con una reservación existente' });
+  }
+
+  const created = await prisma.appointment.create({
+    data: {
+      id: uuid(),
+      time: body.time,
+      patientId: body.patientId,
+      treatment: body.treatment,
+      status: body.status,
+      doctor: body.doctor,
+      startHour: body.startHour,
+      durationHours: body.durationHours,
+    },
+    include: { patient: true }
+  });
+
+  await audit(req, 'create', 'appointment', created.id);
   await notify('Cita reservada', `${body.treatment} programada para las ${body.time}.`);
+  
   res.status(201).json(created);
 }));
 
 app.patch('/api/appointments/:id', requireAuth, requireRole('admin', 'doctor', 'recepcionista'), asyncHandler(async (req, res) => {
   const body = appointmentSchema.partial().parse(req.body);
-  let updated: Appointment | undefined;
-  await updateData((data) => {
-    const index = data.appointments.findIndex((a) => a.id === req.params.id);
-    if (index === -1) return;
-    data.appointments[index] = { ...data.appointments[index], ...body, updatedAt: now() };
-    updated = data.appointments[index];
+  
+  const updated = await prisma.appointment.update({
+    where: { id: req.params.id },
+    data: body,
+    include: { patient: true }
   });
-  if (!updated) return res.status(404).json({ error: 'Cita no encontrada' });
+
   await audit(req, 'update', 'appointment', updated.id);
   res.json(updated);
 }));
 
 app.delete('/api/appointments/:id', requireAuth, requireRole('admin', 'doctor', 'recepcionista'), asyncHandler(async (req, res) => {
-  await updateData((data) => {
-    data.appointments = data.appointments.map((a) => a.id === req.params.id ? { ...a, status: 'Cancelada', updatedAt: now() } : a);
+  const id = req.params.id;
+  
+  await prisma.appointment.update({
+    where: { id },
+    data: { status: 'Cancelada' }
   });
-  await audit(req, 'cancel', 'appointment', req.params.id);
-  await notify('Cita cancelada', `La cita ${req.params.id} fue cancelada.`);
+
+  await audit(req, 'cancel', 'appointment', id);
+  await notify('Cita cancelada', `La cita ${id} fue cancelada.`);
+  
   res.status(204).end();
 }));
 
 app.get('/api/budgets', requireAuth, asyncHandler(async (_req, res) => {
-  const data = await readData();
-  const patientsById = new Map(data.patients.map((p) => [p.id, p]));
-  res.json(data.budgets.map((b) => ({ ...b, patient: patientsById.get(b.patientId) })));
+  const budgets = await prisma.budget.findMany({
+    include: { items: true, patient: true },
+    orderBy: { createdAt: 'desc' }
+  });
+  res.json(budgets);
 }));
 
 app.post('/api/budgets', requireAuth, requireRole('admin', 'doctor', 'recepcionista'), asyncHandler(async (req, res) => {
   const body = budgetSchema.parse(req.body);
-  let created: Budget | undefined;
-  await updateData((data) => {
-    if (!data.patients.some((p) => p.id === body.patientId)) throw Object.assign(new Error('Paciente no encontrado'), { status: 404 });
-    created = {
-      id: `PR-${new Date().getFullYear()}-${uuid().slice(0, 8).toUpperCase()}`,
-      ...body,
-      items: body.items.map((item): BudgetItem => ({ id: uuid(), ...item, total: item.total ?? item.unitPrice })),
-      createdAt: now(),
-      updatedAt: now(),
-    };
-    data.budgets.push(created);
+  
+  const patientExists = await prisma.patient.findUnique({ where: { id: body.patientId } });
+  if (!patientExists) {
+    return res.status(404).json({ error: 'Paciente no encontrado' });
+  }
+
+  const id = `PR-${new Date().getFullYear()}-${uuid().slice(0, 8).toUpperCase()}`;
+  
+  const created = await prisma.budget.create({
+    data: {
+      id,
+      patientId: body.patientId,
+      status: body.status,
+      discountPercent: body.discountPercent,
+      items: {
+        create: body.items.map((item) => ({
+          id: uuid(),
+          code: item.code,
+          description: item.description,
+          tooth: item.tooth,
+          unitPrice: item.unitPrice,
+          total: item.total ?? item.unitPrice,
+        }))
+      }
+    },
+    include: { items: true, patient: true }
   });
-  await audit(req, 'create', 'budget', created?.id);
-  await notify('Presupuesto creado', `El presupuesto estimado ${created?.id} fue creado.`);
+
+  await audit(req, 'create', 'budget', created.id);
+  await notify('Presupuesto creado', `El presupuesto estimado ${created.id} fue creado.`);
+  
   res.status(201).json(created);
 }));
 
 app.post('/api/budgets/:id/items', requireAuth, requireRole('admin', 'doctor', 'recepcionista'), asyncHandler(async (req, res) => {
   const body = budgetItemSchema.parse(req.body);
-  let item: BudgetItem | undefined;
-  await updateData((data) => {
-    const budget = data.budgets.find((b) => b.id === req.params.id);
-    if (!budget) return;
-    item = { id: uuid(), ...body, total: body.total ?? body.unitPrice };
-    budget.items.push(item);
-    budget.updatedAt = now();
+  
+  const budgetExists = await prisma.budget.findUnique({ where: { id: req.params.id } });
+  if (!budgetExists) {
+    return res.status(404).json({ error: 'Presupuesto no encontrado' });
+  }
+
+  const createdItem = await prisma.budgetItem.create({
+    data: {
+      id: uuid(),
+      budgetId: req.params.id,
+      code: body.code,
+      description: body.description,
+      tooth: body.tooth,
+      unitPrice: body.unitPrice,
+      total: body.total ?? body.unitPrice,
+    }
   });
-  if (!item) return res.status(404).json({ error: 'Presupuesto no encontrado' });
+
   await audit(req, 'add_item', 'budget', req.params.id);
-  res.status(201).json(item);
+  res.status(201).json(createdItem);
 }));
 
 app.get('/api/odontograms/:patientId', requireAuth, asyncHandler(async (req, res) => {
-  const data = await readData();
-  const odontogram = data.odontograms.find((o) => o.patientId === req.params.patientId);
-  res.json(odontogram || { patientId: req.params.patientId, teeth: {}, interventions: [], updatedAt: now() });
+  const odontogram = await prisma.odontogram.findUnique({ where: { patientId: req.params.patientId } });
+  res.json(odontogram ? {
+    patientId: odontogram.patientId,
+    teeth: JSON.parse(odontogram.teeth),
+    interventions: JSON.parse(odontogram.interventions),
+    updatedAt: odontogram.updatedAt.toISOString()
+  } : {
+    patientId: req.params.patientId,
+    teeth: {},
+    interventions: [],
+    updatedAt: now()
+  });
 }));
 
 app.put('/api/odontograms/:patientId', requireAuth, requireRole('admin', 'doctor'), asyncHandler(async (req, res) => {
@@ -317,41 +392,101 @@ app.put('/api/odontograms/:patientId', requireAuth, requireRole('admin', 'doctor
     })).default([]),
   });
   const body = schema.parse(req.body);
-  let saved;
-  await updateData((data) => {
-    const teeth = Object.fromEntries(
-      Object.entries(body.teeth).map(([key, tooth]) => [key, { ...tooth, updatedAt: tooth.updatedAt || now() }]),
-    );
-    const next = { patientId: req.params.patientId, ...body, teeth, updatedAt: now() };
-    const index = data.odontograms.findIndex((o) => o.patientId === req.params.patientId);
-    if (index >= 0) data.odontograms[index] = next;
-    else data.odontograms.push(next);
-    saved = next;
+
+  const teeth = Object.fromEntries(
+    Object.entries(body.teeth).map(([key, tooth]) => [key, { ...tooth, updatedAt: tooth.updatedAt || now() }]),
+  );
+
+  const saved = await prisma.odontogram.upsert({
+    where: { patientId: req.params.patientId },
+    create: {
+      patientId: req.params.patientId,
+      teeth: JSON.stringify(teeth),
+      interventions: JSON.stringify(body.interventions),
+    },
+    update: {
+      teeth: JSON.stringify(teeth),
+      interventions: JSON.stringify(body.interventions),
+    }
   });
-  res.json(saved);
+
+  res.json({
+    patientId: saved.patientId,
+    teeth: JSON.parse(saved.teeth),
+    interventions: JSON.parse(saved.interventions),
+    updatedAt: saved.updatedAt.toISOString()
+  });
+}));
+
+app.get('/api/chats', requireAuth, asyncHandler(async (_req, res) => {
+  const chats = await prisma.chat.findMany({ orderBy: { updatedAt: 'desc' } });
+  res.json(chats.map(c => ({
+    ...c,
+    messages: JSON.parse(c.messages)
+  })));
+}));
+
+app.put('/api/chats/:id', requireAuth, asyncHandler(async (req, res) => {
+  const schema = z.object({
+    lastMessage: z.string(),
+    time: z.string(),
+    isNew: z.boolean().default(false),
+    messages: z.array(z.object({
+      id: z.string(),
+      sender: z.enum(['patient', 'doctor']),
+      text: z.string(),
+      time: z.string(),
+    })),
+  });
+  const body = schema.parse(req.body);
+
+  const updated = await prisma.chat.upsert({
+    where: { id: req.params.id },
+    create: {
+      id: req.params.id,
+      patientName: req.body.patientName || 'Paciente',
+      initials: req.body.initials || 'P',
+      avatar: req.body.avatar || null,
+      lastMessage: body.lastMessage,
+      time: body.time,
+      isNew: body.isNew,
+      messages: JSON.stringify(body.messages),
+    },
+    update: {
+      lastMessage: body.lastMessage,
+      time: body.time,
+      isNew: body.isNew,
+      messages: JSON.stringify(body.messages),
+    }
+  });
+
+  res.json({
+    ...updated,
+    messages: JSON.parse(updated.messages)
+  });
 }));
 
 app.get('/api/notifications', requireAuth, asyncHandler(async (_req, res) => {
-  const data = await readData();
-  res.json(data.notifications);
+  const notifications = await prisma.notification.findMany({ orderBy: { createdAt: 'desc' }, take: 100 });
+  res.json(notifications);
 }));
 
 app.post('/api/notifications/read-all', requireAuth, asyncHandler(async (req, res) => {
-  await updateData((data) => {
-    data.notifications = data.notifications.map((n) => ({ ...n, read: true }));
+  await prisma.notification.updateMany({
+    data: { read: true }
   });
   await audit(req, 'read_all', 'notification');
   res.status(204).end();
 }));
 
 app.get('/api/audit-logs', requireAuth, requireRole('admin'), asyncHandler(async (_req, res) => {
-  const data = await readData();
-  res.json(data.auditLogs.slice(0, 200));
+  const logs = await prisma.auditLog.findMany({ orderBy: { createdAt: 'desc' }, take: 200 });
+  res.json(logs);
 }));
 
 app.get('/api/settings', requireAuth, asyncHandler(async (_req, res) => {
-  const data = await readData();
-  res.json(data.settings);
+  const settings = await prisma.clinicSettings.findUnique({ where: { id: 'singleton' } });
+  res.json(settings);
 }));
 
 app.put('/api/settings', requireAuth, requireRole('admin'), asyncHandler(async (req, res) => {
@@ -362,11 +497,13 @@ app.put('/api/settings', requireAuth, requireRole('admin'), asyncHandler(async (
     whatsAppNumber: z.string().min(7).max(40),
     complianceMode: z.enum(['demo', 'production']).default('demo'),
   }).parse(req.body);
-  let settings;
-  await updateData((data) => {
-    data.settings = { ...body, updatedAt: now() };
-    settings = data.settings;
+
+  const settings = await prisma.clinicSettings.upsert({
+    where: { id: 'singleton' },
+    create: { id: 'singleton', ...body },
+    update: body,
   });
+
   res.json(settings);
 }));
 

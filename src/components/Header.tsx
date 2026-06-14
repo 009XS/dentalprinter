@@ -10,6 +10,7 @@ import {
   X,
   XCircle
 } from 'lucide-react';
+import type { Patient } from '../types';
 
 interface HeaderProps {
   currentTab: string;
@@ -23,6 +24,9 @@ interface HeaderProps {
   onTriggerAIAssistant: () => void;
   mobileMenuOpen: boolean;
   setMobileMenuOpen: (open: boolean) => void;
+  patients: Patient[];
+  selectedPatientId: string;
+  setSelectedPatientId: (id: string) => void;
 }
 
 export default function Header({
@@ -36,7 +40,10 @@ export default function Header({
   setNotificationsCount,
   onTriggerAIAssistant,
   mobileMenuOpen,
-  setMobileMenuOpen
+  setMobileMenuOpen,
+  patients,
+  selectedPatientId,
+  setSelectedPatientId
 }: HeaderProps) {
   const [notifDropdownOpen, setNotifDropdownOpen] = useState(false);
 
@@ -106,6 +113,25 @@ export default function Header({
       {/* Acciones del Encabezado */}
       <div className="flex items-center gap-2 md:gap-4">
         
+        {/* Selector Global de Paciente */}
+        <div className="flex items-center gap-2 border-r border-[#ebeef0] dark:border-slate-800 pr-2 md:pr-4">
+          <span className="text-[10px] font-sans font-bold uppercase tracking-wider text-slate-400 dark:text-slate-505 hidden lg:inline">Paciente Activo:</span>
+          <select 
+            value={selectedPatientId}
+            onChange={(e) => setSelectedPatientId(e.target.value)}
+            className="border border-[#c4c7c8]/60 dark:border-slate-700/60 rounded-lg py-1 px-2 bg-[#f1f4f6]/80 dark:bg-slate-800/80 text-slate-800 dark:text-white font-sans text-xs outline-none focus:border-blue-600 dark:focus:border-blue-400 focus:ring-1 focus:ring-blue-600 dark:focus:ring-blue-400 transition-all cursor-pointer"
+            title="Seleccionar paciente activo"
+          >
+            {patients.length === 0 ? (
+              <option value="">Sin pacientes</option>
+            ) : (
+              patients.map(p => (
+                <option key={p.id} value={p.id}>{p.name}</option>
+              ))
+            )}
+          </select>
+        </div>
+
         {/* Botón de Asistente de IA */}
         <button 
           id="btn-ai-assistant-header"

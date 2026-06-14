@@ -13,6 +13,7 @@ import {
   CalendarDays
 } from 'lucide-react';
 import { Patient, Appointment, Chat, AppointmentStatus, Budget } from '../types';
+import { updateChat } from '../api';
 
 interface DashboardViewProps {
   patients: Patient[];
@@ -82,7 +83,7 @@ export default function DashboardView({
   };
 
   // Enviar mensaje en chat
-  const handleSendMessage = (e: FormEvent) => {
+  const handleSendMessage = async (e: FormEvent) => {
     e.preventDefault();
     if (!typedMessage.trim() || !activeChatId) return;
 
@@ -96,23 +97,33 @@ export default function DashboardView({
       time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
     };
 
-    const updatedChats = chats.map(c => {
-      if (c.id === activeChatId) {
-        return {
-          ...c,
-          lastMessage: newMsg.text,
-          time: newMsg.time,
-          messages: [...c.messages, newMsg]
-        };
-      }
-      return c;
-    });
+    const targetChat = {
+      ...chatInstance,
+      lastMessage: newMsg.text,
+      time: newMsg.time,
+      messages: [...chatInstance.messages, newMsg]
+    };
 
+    const updatedChats = chats.map(c => c.id === activeChatId ? targetChat : c);
     setChats(updatedChats);
     setTypedMessage('');
 
+    try {
+      await updateChat(activeChatId, {
+        lastMessage: targetChat.lastMessage,
+        time: targetChat.time,
+        isNew: false,
+        messages: targetChat.messages,
+        patientName: targetChat.name,
+        initials: targetChat.initials,
+        avatar: targetChat.avatar,
+      });
+    } catch (err) {
+      console.error('Error al guardar mensaje en servidor:', err);
+    }
+
     // Respuestas automáticas simuladas en español
-    setTimeout(() => {
+    setTimeout(async () => {
       let patientReplyText = "Muchas gracias doctor, estaré al pendiente.";
       if (chatInstance.name.includes('Luis')) {
         patientReplyText = "¡Excelente! ¿Me confirma si las 3:30 PM está bien? Gracias de nuevo.";
@@ -129,18 +140,29 @@ export default function DashboardView({
         time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
       };
 
-      const finalChats = chats.map(c => {
-        if (c.id === activeChatId) {
-          return {
-            ...c,
-            lastMessage: replyMsg.text,
-            time: replyMsg.time,
-            messages: [...c.messages, replyMsg]
-          };
-        }
-        return c;
-      });
+      const finalChat = {
+        ...targetChat,
+        lastMessage: replyMsg.text,
+        time: replyMsg.time,
+        messages: [...targetChat.messages, replyMsg]
+      };
+
+      const finalChats = chats.map(c => c.id === activeChatId ? finalChat : c);
       setChats(finalChats);
+
+      try {
+        await updateChat(activeChatId, {
+          lastMessage: finalChat.lastMessage,
+          time: finalChat.time,
+          isNew: finalChat.isNew,
+          messages: finalChat.messages,
+          patientName: finalChat.name,
+          initials: finalChat.initials,
+          avatar: finalChat.avatar,
+        });
+      } catch (err) {
+        console.error('Error al guardar respuesta en servidor:', err);
+      }
     }, 1500);
   };
 
