@@ -1,0 +1,138 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           String   @id
+  name         String
+  email        String   @unique
+  passwordHash String
+  role         String
+  createdAt    DateTime @default(now())
+}
+
+model Patient {
+  id           String        @id
+  name         String
+  avatar       String?
+  initials     String
+  dob          String
+  age          Int
+  phone        String
+  allergies    String?
+  riskLevel    String
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+  appointments Appointment[]
+  budgets      Budget[]
+  odontogram   Odontogram?
+
+  @@index([name])
+}
+
+model Appointment {
+  id            String   @id
+  time          String
+  patientId     String
+  treatment     String
+  status        String
+  doctor        String
+  startHour     Float
+  durationHours Float
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  patient       Patient  @relation(fields: [patientId], references: [id], onDelete: Cascade)
+
+  @@index([patientId])
+  @@index([doctor, startHour])
+  @@index([status])
+}
+
+model Chat {
+  id          String   @id
+  patientName String
+  initials    String
+  avatar      String?
+  lastMessage String
+  time        String
+  isNew       Boolean  @default(false)
+  messages    String
+  updatedAt   DateTime @updatedAt
+}
+
+model Budget {
+  id              String       @id
+  patientId       String
+  status          String
+  discountPercent Float        @default(0)
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+  patient         Patient      @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  items           BudgetItem[]
+
+  @@index([patientId])
+  @@index([status])
+}
+
+model BudgetItem {
+  id          String @id
+  budgetId    String
+  code        String
+  description String
+  tooth       String
+  unitPrice   Float
+  total       Float
+  budget      Budget @relation(fields: [budgetId], references: [id], onDelete: Cascade)
+
+  @@index([budgetId])
+}
+
+model Odontogram {
+  patientId     String   @id
+  teeth         String
+  interventions String
+  updatedAt     DateTime @updatedAt
+  patient       Patient  @relation(fields: [patientId], references: [id], onDelete: Cascade)
+}
+
+model Notification {
+  id        String   @id
+  title     String
+  desc      String
+  time      String
+  read      Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  @@index([read])
+  @@index([createdAt])
+}
+
+model AuditLog {
+  id         String   @id
+  actorId    String
+  actorEmail String
+  action     String
+  entityType String
+  entityId   String?
+  ip         String?
+  createdAt  DateTime @default(now())
+
+  @@index([actorId])
+  @@index([entityType])
+  @@index([createdAt])
+}
+
+model ClinicSettings {
+  id             String   @id @default("singleton")
+  clinicName     String
+  tagline        String
+  notationSystem String
+  whatsAppNumber String
+  complianceMode String
+  updatedAt      DateTime @updatedAt
+}

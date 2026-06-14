@@ -1,0 +1,6 @@
+{
+  "name": "Dentalprinter Clinic",
+  "description": "A comprehensive cloud clinical suite for dental practices featuring an interactive odontograma dental mapping chart, live physician swimlane calendars, patient budgeting, and radiography analysis.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
