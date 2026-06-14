@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { 
   FileText, 
   Trash2, 
@@ -31,9 +31,30 @@ export default function PresupuestosView({
   setLiveItems,
   searchQuery
 }: PresupuestosViewProps) {
-  const [activeBudgetId, setActiveBudgetId] = useState<string>('PR-2023-1042');
+  const [activeBudgetId, setActiveBudgetId] = useState<string>('live');
   const [discountPercent, setDiscountPercent] = useState<number>(5);
   const [whatsappPreviewOpen, setWhatsappPreviewOpen] = useState(false);
+
+  // Sincronizar activeBudgetId con presupuestos reales si existen
+  useEffect(() => {
+    if (budgets && budgets.length > 0) {
+      setActiveBudgetId(budgets[0].id);
+    } else {
+      setActiveBudgetId('live');
+    }
+  }, [budgets]);
+
+  // Cálculos dinámicos de KPIs reales de presupuestos
+  const pendingBudgets = budgets.filter(b => b.status === 'Pendiente');
+  const totalPendingVal = pendingBudgets.reduce((sum, b) => {
+    const bSubtotal = b.items.reduce((acc, item) => acc + item.unitPrice, 0);
+    const bDiscount = bSubtotal * (b.discountPercent / 100);
+    return sum + (bSubtotal - bDiscount);
+  }, 0);
+
+  const approvedBudgets = budgets.filter(b => b.status === 'Aprobado');
+  const approvalRate = budgets.length > 0 ? Math.round((approvedBudgets.length / budgets.length) * 100) : 0;
+  const recentApprovedCount = approvedBudgets.length;
 
   const saveLiveBudget = async () => {
     if (liveItems.length === 0) return;
@@ -71,7 +92,7 @@ export default function PresupuestosView({
   const activeBudget = budgets.find(b => b.id === activeBudgetId);
 
   // Datos del paciente activo
-  const activeName = isLive ? activePatient.name : (activeBudget?.patientName || 'Elena Rodríguez');
+  const activeName = isLive ? activePatient.name : (activeBudget?.patientName || activePatient?.name || 'Paciente');
   const activeItems = isLive ? liveItems : (activeBudget?.items || []);
 
   // Cálculos dinámicos reales basados en la lista de ítems activos
@@ -168,26 +189,26 @@ export default function PresupuestosView({
         {/* KPI 1 - Total Pendiente */}
         <div className="bg-white/80 dark:bg-slate-800/80 backdrop-blur-md rounded-xl p-6 border border-[#c4c7c8]/40 dark:border-slate-700/60 relative overflow-hidden group hover:border-blue-600 transition-all duration-300">
           <div className="absolute -right-4 -top-4 w-24 h-24 bg-blue-600/5 rounded-full blur-xl"></div>
-          <p className="font-sans font-bold text-[10px] tracking-wider text-[#444748] dark:text-slate-400 uppercase mb-2">Total Pendiente (Mes Actual)</p>
-          <h3 className="font-serif text-3xl font-bold text-[#181c1e] dark:text-white">$24,500</h3>
+          <p className="font-sans font-bold text-[10px] tracking-wider text-[#444748] dark:text-slate-400 uppercase mb-2">Total Pendiente (Presupuestos Activos)</p>
+          <h3 className="font-serif text-3xl font-bold text-[#181c1e] dark:text-white">${totalPendingVal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</h3>
           <p className="font-sans text-xs font-semibold text-blue-600 dark:text-blue-400 flex items-center gap-1 mt-2">
-            <TrendingUp className="w-3.5 h-3.5" /> +12% respecto al mes anterior
+            <TrendingUp className="w-3.5 h-3.5" /> Sincronizado en tiempo real
           </p>
         </div>
 
         {/* KPI 2 - Tasa de Aprobación */}
         <div className="bg-white/90 dark:bg-slate-900 border border-[#c4c7c8]/40 dark:border-slate-800 rounded-xl p-6 shadow-xs">
           <p className="font-sans font-bold text-[10px] tracking-wider text-[#444748] dark:text-slate-400 uppercase mb-2">Tasa de Aprobación</p>
-          <h3 className="font-serif text-3xl font-bold text-slate-900 dark:text-white">68%</h3>
+          <h3 className="font-serif text-3xl font-bold text-slate-900 dark:text-white">{approvalRate}%</h3>
           <div className="w-full bg-slate-200 dark:bg-slate-800 rounded-full h-2 mt-4">
-            <div className="bg-blue-600 dark:bg-blue-400 h-2 rounded-full" style={{ width: '68%' }}></div>
+            <div className="bg-blue-600 dark:bg-blue-400 h-2 rounded-full" style={{ width: `${approvalRate}%` }}></div>
           </div>
         </div>
 
         {/* KPI 3 - Aprobaciones Recientes */}
         <div className="bg-white/90 dark:bg-slate-900 border border-[#c4c7c8]/40 dark:border-slate-800 rounded-xl p-6 shadow-xs">
           <p className="font-sans font-bold text-[10px] tracking-wider text-[#444748] dark:text-slate-400 uppercase mb-2">Aprobaciones Recientes</p>
-          <h3 className="font-serif text-3xl font-bold text-slate-900 dark:text-white">12</h3>
+          <h3 className="font-serif text-3xl font-bold text-slate-900 dark:text-white">{recentApprovedCount}</h3>
           <p className="font-sans text-xs text-slate-500 dark:text-slate-400 mt-2">En espera de programación de citas</p>
         </div>
 
@@ -284,7 +305,7 @@ export default function PresupuestosView({
                   <tr>
                     <td colSpan={6} className="py-12 text-center text-slate-400 dark:text-slate-500 text-xs">
                       <FileText className="w-10 h-10 mx-auto text-slate-300 mb-2" />
-                      No hay tratamientos cotizados aún. Ve a la pestaña "Odontograma", selecciona un diente (ej. 38) y haz clic en "Añadir al Plan de Tratamiento".
+                      No hay tratamientos cotizados aún. Ve a la pestaña "Odontograma", selecciona un diente (ej. 18) y haz clic en "Añadir al Plan de Tratamiento".
                     </td>
                   </tr>
                 ) : (

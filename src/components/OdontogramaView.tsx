@@ -26,7 +26,7 @@ export default function OdontogramaView({
   searchQuery
 }: OdontogramaViewProps) {
   const [isPediatric, setIsPediatric] = useState(false);
-  const [selectedTooth, setSelectedTooth] = useState<number | null>(38); // Diente 38 seleccionado por defecto
+  const [selectedTooth, setSelectedTooth] = useState<number | null>(18); // Diente 18 seleccionado por defecto
   const [activeTool, setActiveTool] = useState<'Caries' | 'Extraction' | 'Crown' | 'Implant'>('Crown');
   const [selectedFinding, setSelectedFinding] = useState('Caries Profunda - Distal');
   const [observationNotes, setObservationNotes] = useState('');

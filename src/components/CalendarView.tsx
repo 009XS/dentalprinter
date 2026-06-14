@@ -102,6 +102,13 @@ export default function CalendarView({
     };
   };
 
+  // Obtener fecha de hoy formateada en español
+  const getTodayDateLabel = () => {
+    const options: Intl.DateTimeFormatOptions = { weekday: 'long', day: 'numeric', month: 'long' };
+    const dateStr = new Date().toLocaleDateString('es-ES', options);
+    return dateStr.charAt(0).toUpperCase() + dateStr.slice(1);
+  };
+
   return (
     <div id="calendar-view-root" className="p-6 overflow-y-auto space-y-6">
       
@@ -109,7 +116,7 @@ export default function CalendarView({
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-sky-100/10 dark:border-slate-800 pb-5">
         <div>
           <h2 className="font-serif text-3xl md:text-5xl font-bold text-slate-900 dark:text-white">Hoy</h2>
-          <p className="font-sans text-sm md:text-base text-[#444748] dark:text-slate-400 mt-1">Jueves, 26 de Octubre</p>
+          <p className="font-sans text-sm md:text-base text-[#444748] dark:text-slate-400 mt-1">{getTodayDateLabel()}</p>
         </div>
 
         {/* selectores de tipo de vista */}
