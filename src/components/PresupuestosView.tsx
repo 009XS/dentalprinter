@@ -22,6 +22,7 @@ interface PresupuestosViewProps {
   setLiveItems: (items: BudgetItem[]) => void;
   searchQuery: string;
   onOpenPatientModal?: () => void;
+  showToast?: (message: string, type?: 'success' | 'error' | 'info') => void;
 }
 
 export default function PresupuestosView({
@@ -31,7 +32,8 @@ export default function PresupuestosView({
   liveItems,
   setLiveItems,
   searchQuery,
-  onOpenPatientModal
+  onOpenPatientModal,
+  showToast
 }: PresupuestosViewProps) {
   const [activeBudgetId, setActiveBudgetId] = useState<string>('live');
   const [discountPercent, setDiscountPercent] = useState<number>(5);
@@ -101,9 +103,17 @@ export default function PresupuestosView({
       setBudgets([mappedBudget, ...budgets]);
       setLiveItems([]);
       setActiveBudgetId(newBudget.id);
-      alert(`¡Presupuesto ${newBudget.id} guardado correctamente en la base de datos!`);
+      if (showToast) {
+        showToast(`¡Presupuesto ${newBudget.id} guardado correctamente!`, 'success');
+      } else {
+        alert(`¡Presupuesto ${newBudget.id} guardado correctamente en la base de datos!`);
+      }
     } catch (err: any) {
-      alert(`Error al guardar el presupuesto: ${err.message}`);
+      if (showToast) {
+        showToast(`Error al guardar el presupuesto: ${err.message}`, 'error');
+      } else {
+        alert(`Error al guardar el presupuesto: ${err.message}`);
+      }
     }
   };
 
@@ -291,7 +301,11 @@ export default function PresupuestosView({
             )}
             <button 
               onClick={() => {
-                alert('Descargando archivo PDF del presupuesto...');
+                if (showToast) {
+                  showToast('Preparando impresión del presupuesto...', 'info');
+                } else {
+                  alert('Descargando archivo PDF del presupuesto...');
+                }
                 window.print();
               }}
               className="flex-grow md:flex-none flex items-center justify-center gap-1 px-4 py-2 bg-white dark:bg-slate-800 text-xs font-bold text-slate-700 dark:text-slate-200 border border-[#c4c7c8]/60 dark:border-slate-700 hover:bg-slate-50 rounded-lg transform active:scale-98 transition-all cursor-pointer"
@@ -428,7 +442,11 @@ export default function PresupuestosView({
             <div className="p-4 border-t border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/60 flex justify-end gap-2.5">
               <button 
                 onClick={() => {
-                  alert('¡Mensaje enviado correctamente al canal virtual del paciente!');
+                  if (showToast) {
+                    showToast('¡Mensaje enviado al canal virtual del paciente!', 'success');
+                  } else {
+                    alert('¡Mensaje enviado correctamente al canal virtual del paciente!');
+                  }
                   setWhatsappPreviewOpen(false);
                 }}
                 className="bg-emerald-650 hover:bg-emerald-700 bg-emerald-600 text-white text-xs font-bold font-sans py-2 px-4 rounded-lg cursor-pointer transition-colors uppercase flex items-center gap-1.5"

@@ -13,6 +13,7 @@ interface CalendarViewProps {
   patients: Patient[];
   onOpenAppointmentModal: () => void;
   searchQuery: string;
+  showToast?: (message: string, type?: 'success' | 'error' | 'info') => void;
 }
 
 export default function CalendarView({
@@ -20,7 +21,8 @@ export default function CalendarView({
   setAppointments,
   patients,
   onOpenAppointmentModal,
-  searchQuery
+  searchQuery,
+  showToast
 }: CalendarViewProps) {
   const [viewMode, setViewMode] = useState<'day' | 'week' | 'month'>('day');
   const [showAiModal, setShowAiModal] = useState(false);
@@ -71,7 +73,11 @@ export default function CalendarView({
   // Creación automática de reserva sugerida
   const acceptAiProposal = () => {
     if (patients.length === 0) {
-      alert('Por favor, registra al menos un paciente antes de agendar una propuesta de la IA.');
+      if (showToast) {
+        showToast('Por favor, registra al menos un paciente antes de agendar una propuesta de la IA.', 'error');
+      } else {
+        alert('Por favor, registra al menos un paciente antes de agendar una propuesta de la IA.');
+      }
       setShowAiModal(false);
       return;
     }

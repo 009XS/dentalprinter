@@ -24,6 +24,7 @@ interface DashboardViewProps {
   setCurrentTab: (tab: string) => void;
   setSelectedPatientId: (id: string) => void;
   searchQuery: string;
+  showToast?: (message: string, type?: 'success' | 'error' | 'info') => void;
 }
 
 export default function DashboardView({
@@ -34,7 +35,8 @@ export default function DashboardView({
   setChats,
   setCurrentTab,
   setSelectedPatientId,
-  searchQuery
+  searchQuery,
+  showToast
 }: DashboardViewProps) {
   const [activeChatId, setActiveChatId] = useState<string | null>(null);
   const [typedMessage, setTypedMessage] = useState('');
@@ -67,6 +69,9 @@ export default function DashboardView({
       return appt;
     });
     setAppointments(updated);
+    if (showToast) {
+      showToast(`Estado de cita actualizado a: ${nextStatus}`, 'info');
+    }
   };
 
   // Eliminar/Cancelar cita
@@ -74,6 +79,9 @@ export default function DashboardView({
     const updated = appointments.filter(appt => appt.id !== id);
     setAppointments(updated);
     setActiveMenuId(null);
+    if (showToast) {
+      showToast('Cita cancelada y eliminada con éxito', 'info');
+    }
   };
 
   // Abrir chat
@@ -107,6 +115,9 @@ export default function DashboardView({
     const updatedChats = chats.map(c => c.id === activeChatId ? targetChat : c);
     setChats(updatedChats);
     setTypedMessage('');
+    if (showToast) {
+      showToast('Mensaje enviado al paciente', 'success');
+    }
 
     try {
       await updateChat(activeChatId, {
@@ -188,7 +199,7 @@ export default function DashboardView({
       <div id="kpi-bento-grid" className="grid grid-cols-1 md:grid-cols-2 gap-6">
         
         {/* KPI 1 - Pacientes Totales */}
-        <div className="bg-white/80 dark:bg-slate-800/80 backdrop-blur-md rounded-xl p-6 border border-[#c4c7c8]/40 dark:border-slate-700/60 relative overflow-hidden group hover:border-blue-600 transition-all duration-300">
+        <div className="bg-white/80 dark:bg-slate-800/80 backdrop-blur-md rounded-xl p-6 border border-[#c4c7c8]/40 dark:border-slate-700/60 relative overflow-hidden group hover:border-blue-600 transition-all duration-300 interactive-hover-card">
           <div className="absolute -right-4 -top-4 w-24 h-24 bg-blue-600/5 rounded-full blur-xl group-hover:scale-110 transition-transform"></div>
           <div className="flex items-center justify-between mb-4">
             <span className="font-sans font-bold text-xs uppercase tracking-wider text-[#444748] dark:text-slate-400">Pacientes Totales</span>
@@ -203,7 +214,7 @@ export default function DashboardView({
         </div>
 
         {/* KPI 2 - Citas de Hoy */}
-        <div className="bg-white/80 dark:bg-slate-800/80 backdrop-blur-md rounded-xl p-6 border border-[#c4c7c8]/40 dark:border-slate-700/60 relative overflow-hidden group hover:border-blue-600 transition-all duration-300">
+        <div className="bg-white/80 dark:bg-slate-800/80 backdrop-blur-md rounded-xl p-6 border border-[#c4c7c8]/40 dark:border-slate-700/60 relative overflow-hidden group hover:border-blue-600 transition-all duration-300 interactive-hover-card">
           <div className="absolute -right-4 -top-4 w-24 h-24 bg-red-500/5 rounded-full blur-xl group-hover:scale-110 transition-transform"></div>
           <div className="flex items-center justify-between mb-4">
             <span className="font-sans font-bold text-xs uppercase tracking-wider text-[#444748] dark:text-slate-400">Citas de Hoy</span>

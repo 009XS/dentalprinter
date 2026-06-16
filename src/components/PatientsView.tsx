@@ -20,6 +20,7 @@ interface PatientsViewProps {
   onOpenPatientModal: () => void;
   onOpenEditPatientModal: (patient: Patient) => void;
   onScheduleForPatient: (patientId: string) => void;
+  showToast?: (message: string, type?: 'success' | 'error' | 'info') => void;
 }
 
 export default function PatientsView({
@@ -28,7 +29,8 @@ export default function PatientsView({
   setCurrentTab,
   onOpenPatientModal,
   onOpenEditPatientModal,
-  onScheduleForPatient
+  onScheduleForPatient,
+  showToast
 }: PatientsViewProps) {
   const [localSearch, setLocalSearch] = useState('');
 
@@ -238,14 +240,14 @@ export default function PatientsView({
         </div>
 
         {/* Vista Móvil (Tarjetas Colapsibles) */}
-        <div className="block lg:hidden divide-y divide-slate-100 dark:divide-slate-800/80">
+        <div className="block lg:hidden p-4 space-y-4 bg-slate-50/50 dark:bg-slate-900/10">
           {filteredPatients.length === 0 ? (
             <div className="py-12 text-center text-slate-400 dark:text-slate-500 font-sans">
               No se encontraron pacientes que coincidan con la búsqueda.
             </div>
           ) : (
             filteredPatients.map(patient => (
-              <div key={patient.id} className="p-4 space-y-3 hover:bg-slate-50/40 dark:hover:bg-slate-850/10 transition-colors">
+              <div key={patient.id} className="p-4 bg-white dark:bg-slate-900 border border-slate-200/60 dark:border-slate-800 rounded-2xl space-y-3 transition-all duration-300 hover:shadow-md interactive-hover-card">
                 <div className="flex justify-between items-start">
                   <div className="flex items-center gap-3">
                     {patient.avatar ? (

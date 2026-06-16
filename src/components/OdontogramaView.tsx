@@ -19,13 +19,15 @@ interface OdontogramaViewProps {
   onAddTreatmentItem: (item: BudgetItem) => void;
   searchQuery: string;
   onOpenPatientModal?: () => void;
+  showToast?: (message: string, type?: 'success' | 'error' | 'info') => void;
 }
 
 export default function OdontogramaView({
   activePatient,
   onAddTreatmentItem,
   searchQuery,
-  onOpenPatientModal
+  onOpenPatientModal,
+  showToast
 }: OdontogramaViewProps) {
   const [isPediatric, setIsPediatric] = useState(false);
   const [selectedTooth, setSelectedTooth] = useState<number | null>(18); // Diente 18 seleccionado por defecto
@@ -170,7 +172,11 @@ export default function OdontogramaView({
 
     setCustomInterventions([newInt, ...customInterventions]);
     setObservationNotes('');
-    alert(`¡Tratamiento "${procDesc} (Diente ${selectedTooth})" añadido correctamente al presupuesto de ${activePatient.name}!`);
+    if (showToast) {
+      showToast(`¡Tratamiento "${procDesc} (Diente ${selectedTooth})" añadido correctamente al presupuesto!`, 'success');
+    } else {
+      alert(`¡Tratamiento "${procDesc} (Diente ${selectedTooth})" añadido correctamente al presupuesto de ${activePatient.name}!`);
+    }
   };
 
   // Renderizar ruta geométrica del diente SVG
@@ -261,9 +267,17 @@ export default function OdontogramaView({
                   teeth: teethStates,
                   interventions: customInterventions
                 });
-                alert('¡Historial del odontograma sincronizado con éxito en el servidor de la clínica!');
+                if (showToast) {
+                  showToast('¡Historial del odontograma sincronizado con éxito!', 'success');
+                } else {
+                  alert('¡Historial del odontograma sincronizado con éxito en el servidor de la clínica!');
+                }
               } catch (err: any) {
-                alert(`Error al guardar cambios: ${err.message}`);
+                if (showToast) {
+                  showToast(`Error al guardar cambios: ${err.message}`, 'error');
+                } else {
+                  alert(`Error al guardar cambios: ${err.message}`);
+                }
               }
             }}
             className="px-4 py-2 font-sans font-bold text-xs bg-blue-600 hover:bg-blue-700 text-white dark:bg-blue-500 dark:hover:bg-blue-600 rounded-lg flex items-center gap-2 transform active:scale-98 transition-all shadow-sm cursor-pointer"

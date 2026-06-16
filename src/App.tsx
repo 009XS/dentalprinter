@@ -12,7 +12,10 @@ import {
   Settings,
   LogOut,
   Edit,
-  Stethoscope
+  Stethoscope,
+  CheckCircle2,
+  AlertTriangle,
+  Info
 } from 'lucide-react';
 
 // Importa submódulos
@@ -28,10 +31,32 @@ import SettingsView from './components/SettingsView';
 import PatientsView from './components/PatientsView';
 import { getToken, setToken, bootstrap, login, logout, createAppointment, createPatient, updatePatient, markNotificationsRead } from './api';
 
+interface Toast {
+  id: string;
+  message: string;
+  type: 'success' | 'error' | 'info';
+}
+
 export default function App() {
   // Enrutamiento de vistas y estados globales
   const [currentTab, setCurrentTab] = useState<string>('dashboard');
   const [searchQuery, setSearchQuery] = useState<string>('');
+  
+  // Estado de Toasts
+  const [toasts, setToasts] = useState<Toast[]>([]);
+  const showToast = (message: string, type: 'success' | 'error' | 'info' = 'success') => {
+    const id = Math.random().toString(36).substring(2, 9);
+    setToasts(prev => [...prev, { id, message, type }]);
+    setTimeout(() => {
+      setToasts(prev => prev.filter(t => t.id !== id));
+    }, 4500);
+  };
+
+  // Sincronizar showToast global en window
+  useEffect(() => {
+    (window as any).showToast = showToast;
+  }, []);
+
   const [isDarkMode, setIsDarkMode] = useState<boolean>(() => {
     const saved = localStorage.getItem('theme');
     if (saved) return saved === 'dark';
@@ -179,9 +204,9 @@ export default function App() {
       setPatients(patients.map(p => p.id === updated.id ? updated : p));
       setEditPatientModalOpen(false);
       setEditingPatient(null);
-      alert(`¡Ficha de "${updated.name}" modificada correctamente!`);
+      showToast(`¡Ficha de "${updated.name}" modificada correctamente!`, 'success');
     } catch (err: any) {
-      alert(`Error al modificar paciente: ${err.message}`);
+      showToast(`Error al modificar paciente: ${err.message}`, 'error');
     }
   };
 
@@ -212,9 +237,9 @@ export default function App() {
       setNewPatPhone('');
       setNewPatAllergies('');
       setNewPatRiskLevel('Bajo Riesgo');
-      alert(`¡Paciente "${created.name}" registrado correctamente y seleccionado como activo!`);
+      showToast(`¡Paciente "${created.name}" registrado correctamente y seleccionado como activo!`, 'success');
     } catch (err: any) {
-      alert(`Error al registrar paciente: ${err.message}`);
+      showToast(`Error al registrar paciente: ${err.message}`, 'error');
     }
   };
 
@@ -259,10 +284,10 @@ export default function App() {
       setAppointments([mappedAppt, ...appointments]);
       setAppointmentModalOpen(false);
       setNotificationsCount(prev => prev + 1);
-      alert(`¡Cita programada con éxito para ${patientObj.name}!`);
+      showToast(`¡Cita programada con éxito para ${patientObj.name}!`, 'success');
     })
     .catch((err: any) => {
-      alert(`Error al programar la cita: ${err.message}`);
+      showToast(`Error al programar la cita: ${err.message}`, 'error');
     });
   };
 
@@ -293,7 +318,7 @@ export default function App() {
   };
 
   const dispatchWhatsappReminders = () => {
-    alert('Enviando recordatorios de WhatsApp personalizados a los pacientes pendientes...');
+    showToast('Enviando recordatorios de WhatsApp personalizados a los pacientes pendientes...', 'info');
     setAiAssistantOpen(false);
   };
 
@@ -314,6 +339,7 @@ export default function App() {
             setCurrentTab={setCurrentTab}
             setSelectedPatientId={setSelectedPatientId}
             searchQuery={searchQuery}
+            showToast={showToast}
           />
         );
       case 'patients':
@@ -325,6 +351,7 @@ export default function App() {
             onOpenPatientModal={() => setPatientModalOpen(true)}
             onOpenEditPatientModal={onOpenEditPatientModal}
             onScheduleForPatient={handleScheduleForPatient}
+            showToast={showToast}
           />
         );
       case 'odontogram':
@@ -334,6 +361,7 @@ export default function App() {
             onAddTreatmentItem={handleAddTreatmentItem}
             searchQuery={searchQuery}
             onOpenPatientModal={() => setPatientModalOpen(true)}
+            showToast={showToast}
           />
         );
       case 'calendar':
@@ -344,6 +372,7 @@ export default function App() {
             patients={patients}
             onOpenAppointmentModal={() => setAppointmentModalOpen(true)}
             searchQuery={searchQuery}
+            showToast={showToast}
           />
         );
       case 'presupuestos':
@@ -356,12 +385,13 @@ export default function App() {
             setLiveItems={setLiveItems}
             searchQuery={searchQuery}
             onOpenPatientModal={() => setPatientModalOpen(true)}
+            showToast={showToast}
           />
         );
       case 'radiology':
         return <RadiologyView />;
       case 'settings':
-        return <SettingsView userRole={user?.role} />;
+        return <SettingsView userRole={user?.role} showToast={showToast} />;
       case 'notifications':
         return (
           <div className="p-6 overflow-y-auto space-y-6">
@@ -379,9 +409,9 @@ export default function App() {
                       await markNotificationsRead();
                       setNotificationsCount(0);
                       setNotifications(notifications.map(n => ({ ...n, read: true })));
-                      alert('Notificaciones marcadas como leídas.');
+                      showToast('Notificaciones marcadas como leídas.', 'success');
                     } catch (err: any) {
-                      alert('Error: ' + err.message);
+                      showToast('Error: ' + err.message, 'error');
                     }
                   }}
                   className="bg-blue-600 hover:bg-blue-700 text-white dark:bg-blue-500 dark:hover:bg-blue-600 font-sans font-bold text-xs uppercase tracking-wider py-2 px-4 rounded-lg cursor-pointer transition-colors"
@@ -450,7 +480,7 @@ export default function App() {
               <form 
                 onSubmit={(e) => {
                   e.preventDefault();
-                  alert('¡Ticket enviado con éxito! Nuestro soporte técnico se pondrá en contacto a la brevedad.');
+                  showToast('¡Ticket enviado con éxito! Nuestro soporte técnico se pondrá en contacto a la brevedad.', 'success');
                   setCurrentTab('dashboard');
                 }} 
                 className="space-y-4"
@@ -705,15 +735,17 @@ export default function App() {
 
           {/* VISTA DINÁMICA ACTIVA */}
           <main className="flex-1 overflow-y-auto bg-[#f8fafc] dark:bg-slate-950">
-            {renderCurrentView()}
+            <div key={currentTab} className="animate-fade-in animate-scale-up h-full">
+              {renderCurrentView()}
+            </div>
           </main>
 
         </div>
 
         {/* MODAL DE AGENDAR CITA CLÍNICA */}
         {appointmentModalOpen && (
-          <div className="fixed inset-0 bg-slate-950/50 backdrop-blur-xs flex items-center justify-center z-50 p-4">
-            <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-6 max-w-md w-full shadow-2xl animate-in zoom-in-95 duration-120 font-sans text-xs">
+          <div className="fixed inset-0 bg-slate-950/50 backdrop-blur-xs flex items-center justify-center z-50 p-4 animate-fade-in">
+            <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-6 max-w-md w-full shadow-2xl animate-scale-up font-sans text-xs">
               
               {/* Encabezado del Modal */}
               <div className="flex justify-between items-center pb-3 border-b border-slate-100 dark:border-slate-800 mb-4">
@@ -827,8 +859,8 @@ export default function App() {
 
         {/* MODAL DE NUEVO PACIENTE */}
         {patientModalOpen && (
-          <div className="fixed inset-0 bg-slate-950/50 backdrop-blur-xs flex items-center justify-center z-50 p-4">
-            <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-6 max-w-md w-full shadow-2xl animate-in zoom-in-95 duration-120 font-sans text-xs">
+          <div className="fixed inset-0 bg-slate-950/50 backdrop-blur-xs flex items-center justify-center z-50 p-4 animate-fade-in">
+            <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-6 max-w-md w-full shadow-2xl animate-scale-up font-sans text-xs">
               
               {/* Encabezado del Modal */}
               <div className="flex justify-between items-center pb-3 border-b border-slate-100 dark:border-slate-800 mb-4">
@@ -950,8 +982,8 @@ export default function App() {
 
         {/* MODAL DE EDICIÓN DE PACIENTE */}
         {editPatientModalOpen && editingPatient && (
-          <div className="fixed inset-0 bg-slate-950/50 backdrop-blur-xs flex items-center justify-center z-50 p-4">
-            <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-6 max-w-md w-full shadow-2xl animate-in zoom-in-95 duration-120 font-sans text-xs">
+          <div className="fixed inset-0 bg-slate-950/50 backdrop-blur-xs flex items-center justify-center z-50 p-4 animate-fade-in">
+            <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-6 max-w-md w-full shadow-2xl animate-scale-up font-sans text-xs">
               
               {/* Encabezado del Modal */}
               <div className="flex justify-between items-center pb-3 border-b border-slate-100 dark:border-slate-800 mb-4">
@@ -1073,7 +1105,7 @@ export default function App() {
 
         {/* ASISTENTE CLÍNICO DE IA FLOTANTE */}
         {aiAssistantOpen && (
-          <div className="fixed bottom-6 right-6 z-50 max-w-sm w-full font-sans animate-in slide-in-from-bottom duration-200">
+          <div className="fixed bottom-6 right-6 z-50 max-w-sm w-full font-sans animate-slide-in-bottom">
             <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-2xl overflow-hidden flex flex-col h-[400px]">
               
               {/* Encabezado */}
@@ -1151,6 +1183,39 @@ export default function App() {
             </div>
           </div>
         )}
+
+        {/* CONTENEDOR DE TOASTS ANIMADOS */}
+        <div id="toast-container" className="fixed top-4 right-4 z-[9999] flex flex-col gap-2 pointer-events-none max-w-sm w-full px-4 sm:px-0">
+          {toasts.map(toast => {
+            let bgColor = 'bg-white/95 dark:bg-slate-900/95 border-emerald-500/80 text-emerald-800 dark:text-emerald-350';
+            let Icon = CheckCircle2;
+            if (toast.type === 'error') {
+              bgColor = 'bg-white/95 dark:bg-slate-900/95 border-red-500/80 text-red-800 dark:text-red-350';
+              Icon = AlertTriangle;
+            } else if (toast.type === 'info') {
+              bgColor = 'bg-white/95 dark:bg-slate-900/95 border-blue-500/80 text-blue-800 dark:text-blue-350';
+              Icon = Info;
+            }
+
+            return (
+              <div 
+                key={toast.id}
+                className={`flex items-center gap-3 p-4 rounded-xl border backdrop-blur-md shadow-lg ${bgColor} pointer-events-auto animate-toast-in font-sans text-xs font-bold transition-all duration-300`}
+                role="alert"
+              >
+                <Icon className="w-5 h-5 shrink-0 text-current" />
+                <span className="flex-grow">{toast.message}</span>
+                <button 
+                  onClick={() => setToasts(prev => prev.filter(t => t.id !== toast.id))}
+                  className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 shrink-0 cursor-pointer p-0.5 rounded-md hover:bg-slate-100 dark:hover:bg-slate-800"
+                  title="Cerrar notificación"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+            );
+          })}
+        </div>
 
       </div>
     </div>

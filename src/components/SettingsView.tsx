@@ -9,7 +9,13 @@ import {
 } from 'lucide-react';
 import { getSettings, saveSettings, getAuditLogs } from '../api';
 
-export default function SettingsView({ userRole }: { userRole?: string }) {
+export default function SettingsView({ 
+  userRole,
+  showToast
+}: { 
+  userRole?: string;
+  showToast?: (message: string, type?: 'success' | 'error' | 'info') => void;
+}) {
   const [clinicName, setClinicName] = useState('Dentalprinter');
   const [tagline, setTagline] = useState('Excelencia Clínica');
   const [notationSystem, setNotationSystem] = useState<'universal' | 'fdi'>('universal');
@@ -51,9 +57,16 @@ export default function SettingsView({ userRole }: { userRole?: string }) {
         complianceMode: 'demo'
       });
       setSavedSuccess(true);
+      if (showToast) {
+        showToast('¡Configuración guardada correctamente!', 'success');
+      }
       setTimeout(() => setSavedSuccess(false), 2500);
     } catch (err: any) {
-      alert(`Error al guardar configuración: ${err.message}`);
+      if (showToast) {
+        showToast(`Error al guardar configuración: ${err.message}`, 'error');
+      } else {
+        alert(`Error al guardar configuración: ${err.message}`);
+      }
     }
   };
 
