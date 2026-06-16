@@ -12,6 +12,7 @@ import { prisma } from './db';
 import type { Appointment, Budget, BudgetItem, Doctor, Patient, Role, User } from './types';
 
 const app = express();
+app.set('trust proxy', true);
 const port = Number(process.env.API_PORT || 4000);
 const jwtSecret = process.env.JWT_SECRET || 'development-only-change-before-deploy';
 const now = () => new Date().toISOString();
