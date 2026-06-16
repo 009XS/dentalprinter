@@ -47,7 +47,7 @@ export default function DashboardView({
     if (!searchQuery) return true;
     const query = searchQuery.toLowerCase();
     return (
-      appt.patient.name.toLowerCase().includes(query) ||
+      (appt.patient?.name || '').toLowerCase().includes(query) ||
       appt.treatment.toLowerCase().includes(query) ||
       appt.time.toLowerCase().includes(query)
     );
@@ -280,8 +280,10 @@ export default function DashboardView({
                         {/* Columna de Hora */}
                         <td 
                           onClick={() => {
-                            setSelectedPatientId(appt.patient.id);
-                            setCurrentTab('patients');
+                            if (appt.patient?.id) {
+                              setSelectedPatientId(appt.patient.id);
+                              setCurrentTab('odontogram');
+                            }
                           }}
                           className="py-4 px-5 text-slate-900 dark:text-white font-semibold align-middle shrink-0 whitespace-nowrap"
                         >
@@ -294,26 +296,28 @@ export default function DashboardView({
                         {/* Columna de Paciente */}
                         <td 
                           onClick={() => {
-                            setSelectedPatientId(appt.patient.id);
-                            setCurrentTab('patients');
+                            if (appt.patient?.id) {
+                              setSelectedPatientId(appt.patient.id);
+                              setCurrentTab('odontogram');
+                            }
                           }}
                           className="py-4 px-5 align-middle"
                         >
                           <div className="flex items-center gap-3">
-                            {appt.patient.avatar ? (
+                            {appt.patient?.avatar ? (
                               <img 
                                 src={appt.patient.avatar} 
-                                alt={appt.patient.name} 
+                                alt={appt.patient.name || 'Paciente'} 
                                 className="w-8 h-8 rounded-full object-cover border border-[#c4c7c8]/20 bg-slate-100"
                               />
                             ) : (
                               <div className="w-8 h-8 rounded-full bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300 flex items-center justify-center font-bold text-xs shadow-inner">
-                                {appt.patient.initials}
+                                {appt.patient?.initials || 'P'}
                               </div>
                             )}
                             <div>
-                              <p className="text-slate-900 dark:text-white font-medium group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">{appt.patient.name}</p>
-                              {appt.patient.allergies && (
+                              <p className="text-slate-900 dark:text-white font-medium group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">{appt.patient?.name || 'Paciente'}</p>
+                              {appt.patient?.allergies && (
                                 <p className="text-[10px] text-red-500 font-semibold dark:text-red-400 mt-0.5">⚠️ Alergia: {appt.patient.allergies}</p>
                               )}
                             </div>
@@ -323,8 +327,10 @@ export default function DashboardView({
                         {/* Columna de Tratamiento */}
                         <td 
                           onClick={() => {
-                            setSelectedPatientId(appt.patient.id);
-                            setCurrentTab('patients');
+                            if (appt.patient?.id) {
+                              setSelectedPatientId(appt.patient.id);
+                              setCurrentTab('odontogram');
+                            }
                           }}
                           className="py-4 px-5 text-slate-500 dark:text-slate-300 align-middle truncate max-w-[150px]"
                         >
@@ -362,8 +368,10 @@ export default function DashboardView({
                             <div className="absolute right-3 mt-1.5 w-40 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg shadow-md py-1 z-40 text-left">
                               <button
                                 onClick={() => {
-                                  setSelectedPatientId(appt.patient.id);
-                                  setCurrentTab('patients');
+                                  if (appt.patient?.id) {
+                                    setSelectedPatientId(appt.patient.id);
+                                    setCurrentTab('odontogram');
+                                  }
                                 }}
                                 className="w-full text-left px-3 py-2 text-xs text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700 flex items-center gap-2 cursor-pointer"
                               >

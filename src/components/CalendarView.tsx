@@ -31,7 +31,7 @@ export default function CalendarView({
     if (!searchQuery) return true;
     const query = searchQuery.toLowerCase();
     return (
-      appt.patient.name.toLowerCase().includes(query) ||
+      (appt.patient?.name || '').toLowerCase().includes(query) ||
       appt.treatment.toLowerCase().includes(query)
     );
   });
@@ -92,11 +92,11 @@ export default function CalendarView({
   };
 
   // Calcular la posición porcentual de la tarjeta en el timeline
-  // Escala desde las 08:00 AM (8.0) hasta las 02:00 PM (14.0). Total 6 horas de rango.
+  // Escala desde las 08:00 AM (8.0) hasta las 06:00 PM (18.0). Total 10 horas de rango.
   const getPositionStyling = (startHour: number, duration: number) => {
     const calendarStart = 8.0;
-    const calendarEnd = 14.0;
-    const totalSpan = calendarEnd - calendarStart; // Rango de 6 horas
+    const calendarEnd = 18.0;
+    const totalSpan = calendarEnd - calendarStart; // Rango de 10 horas
     
     const leftOffset = ((startHour - calendarStart) / totalSpan) * 100;
     const widthPercentage = (duration / totalSpan) * 100;
@@ -106,6 +106,25 @@ export default function CalendarView({
       width: `${Math.max(10, Math.min(100, widthPercentage))}%`
     };
   };
+
+  // Obtener posición del indicador de hora actual
+  const getNowIndicatorPosition = () => {
+    const calendarStart = 8.0;
+    const calendarEnd = 18.0;
+    const totalSpan = calendarEnd - calendarStart;
+    
+    const now = new Date();
+    const currentHour = now.getHours() + now.getMinutes() / 60;
+    
+    if (currentHour < calendarStart || currentHour > calendarEnd) {
+      return null;
+    }
+    
+    const percentage = ((currentHour - calendarStart) / totalSpan) * 100;
+    return `${percentage}%`;
+  };
+
+  const indicatorLeft = getNowIndicatorPosition();
 
   // Obtener fecha de hoy formateada en español
   const getTodayDateLabel = () => {
@@ -179,6 +198,10 @@ export default function CalendarView({
               <div className="flex-1 text-center py-3 border-l border-slate-200/40 dark:border-slate-800/40 font-semibold text-[11px] text-slate-500 dark:text-slate-400">12:00</div>
               <div className="flex-1 text-center py-3 border-l border-slate-200/40 dark:border-slate-800/40 font-semibold text-[11px] text-slate-500 dark:text-slate-400">13:00</div>
               <div className="flex-1 text-center py-3 border-l border-slate-200/40 dark:border-slate-800/40 font-semibold text-[11px] text-slate-500 dark:text-slate-400">14:00</div>
+              <div className="flex-1 text-center py-3 border-l border-slate-200/40 dark:border-slate-800/40 font-semibold text-[11px] text-slate-500 dark:text-slate-400">15:00</div>
+              <div className="flex-1 text-center py-3 border-l border-slate-200/40 dark:border-slate-800/40 font-semibold text-[11px] text-slate-500 dark:text-slate-400">16:00</div>
+              <div className="flex-1 text-center py-3 border-l border-slate-200/40 dark:border-slate-800/40 font-semibold text-[11px] text-slate-500 dark:text-slate-400">17:00</div>
+              <div className="flex-1 text-center py-3 border-l border-slate-200/40 dark:border-slate-800/40 font-semibold text-[11px] text-slate-500 dark:text-slate-400">18:00</div>
             </div>
           </div>
 
@@ -192,11 +215,14 @@ export default function CalendarView({
                 <div className="flex-1 flex justify-between h-full">
                   <div className="flex-1 border-l border-slate-100 dark:border-slate-800/30"></div>
                   <div className="flex-1 border-l border-slate-100 dark:border-slate-800/30"></div>
-                  <div className="flex-1 border-l border-slate-100 dark:border-slate-800/30 bg-slate-50/15 dark:bg-slate-850/10"></div>
                   <div className="flex-1 border-l border-slate-100 dark:border-slate-800/30"></div>
-                  <div className="flex-1 border-l border-slate-100 dark:border-slate-800/30 bg-slate-50/15 dark:bg-slate-850/10"></div>
                   <div className="flex-1 border-l border-slate-100 dark:border-slate-800/30"></div>
-                  <div className="flex-1 border-l border-slate-100 dark:border-slate-800/30 bg-slate-50/15 dark:bg-slate-850/10"></div>
+                  <div className="flex-1 border-l border-slate-100 dark:border-slate-800/30"></div>
+                  <div className="flex-1 border-l border-slate-100 dark:border-slate-800/30"></div>
+                  <div className="flex-1 border-l border-slate-100 dark:border-slate-800/30"></div>
+                  <div className="flex-1 border-l border-slate-100 dark:border-slate-800/30"></div>
+                  <div className="flex-1 border-l border-slate-100 dark:border-slate-800/30"></div>
+                  <div className="flex-1 border-l border-slate-100 dark:border-slate-800/30"></div>
                 </div>
               </div>
 
@@ -243,7 +269,7 @@ export default function CalendarView({
                             }`}
                           >
                             <span className="block font-sans font-bold text-xs text-slate-800 dark:text-white truncate">
-                              {appt.patient.name}
+                              {appt.patient?.name || 'Paciente'}
                             </span>
                             <span className="block text-[10px] text-slate-500 dark:text-slate-300 font-medium truncate mt-0.5">
                               {appt.treatment}
@@ -277,10 +303,15 @@ export default function CalendarView({
                 );
               })}
 
-              {/* Indicador de hora actual del timeline (ej. 9:15 AM = 21% de escala) */}
-              <div className="absolute top-0 bottom-0 left-[21%] w-px bg-red-500 z-30 pointer-events-none">
-                <div className="absolute top-0 -left-1.5 w-3.5 h-3.5 rounded-full bg-red-600 border-2 border-white dark:border-slate-900 shadow-md"></div>
-              </div>
+              {/* Indicador de hora actual del timeline dinámico */}
+              {indicatorLeft && (
+                <div 
+                  style={{ left: indicatorLeft }}
+                  className="absolute top-0 bottom-0 w-px bg-red-500 z-30 pointer-events-none transition-all duration-500"
+                >
+                  <div className="absolute top-0 -left-1.5 w-3.5 h-3.5 rounded-full bg-red-600 border-2 border-white dark:border-slate-900 shadow-md"></div>
+                </div>
+              )}
 
             </div>
           </div>

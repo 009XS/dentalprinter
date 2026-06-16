@@ -8,7 +8,8 @@ import {
   HelpCircle, 
   Bell, 
   Plus,
-  LogOut
+  LogOut,
+  Stethoscope
 } from 'lucide-react';
 
 interface SidebarProps {
@@ -32,7 +33,8 @@ export default function Sidebar({
   // Estructura de navegación traducida
   const navItems = [
     { id: 'dashboard', label: 'Panel Control', icon: LayoutDashboard },
-    { id: 'patients', label: 'Odontograma', icon: Users },
+    { id: 'patients', label: 'Pacientes', icon: Users },
+    { id: 'odontogram', label: 'Odontograma', icon: Stethoscope },
     { id: 'calendar', label: 'Calendario', icon: Calendar },
     { id: 'presupuestos', label: 'Presupuestos', icon: FileText },
     { id: 'radiology', label: 'Radiología', icon: Activity },
@@ -41,7 +43,7 @@ export default function Sidebar({
 
   // Metadatos de perfil clínico traducidos y actualizados
   const getProfile = () => {
-    if (currentTab === 'patients') {
+    if (currentTab === 'odontogram' || currentTab === 'patients') {
       return {
         name: 'Dr. Juan Carlos',
         role: 'Director Clínico',

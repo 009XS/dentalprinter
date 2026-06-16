@@ -10,7 +10,9 @@ import {
   FileText,
   Activity,
   Settings,
-  LogOut
+  LogOut,
+  Edit,
+  Stethoscope
 } from 'lucide-react';
 
 // Importa submódulos
@@ -23,7 +25,8 @@ import OdontogramaView from './components/OdontogramaView';
 import PresupuestosView from './components/PresupuestosView';
 import RadiologyView from './components/RadiologyView';
 import SettingsView from './components/SettingsView';
-import { getToken, setToken, bootstrap, login, logout, createAppointment, createPatient, markNotificationsRead } from './api';
+import PatientsView from './components/PatientsView';
+import { getToken, setToken, bootstrap, login, logout, createAppointment, createPatient, updatePatient, markNotificationsRead } from './api';
 
 export default function App() {
   // Enrutamiento de vistas y estados globales
@@ -126,6 +129,8 @@ export default function App() {
   // Modales e interfaces emergentes
   const [appointmentModalOpen, setAppointmentModalOpen] = useState(false);
   const [patientModalOpen, setPatientModalOpen] = useState(false);
+  const [editPatientModalOpen, setEditPatientModalOpen] = useState(false);
+  const [editingPatient, setEditingPatient] = useState<Patient | null>(null);
   const [aiAssistantOpen, setAiAssistantOpen] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
@@ -136,6 +141,54 @@ export default function App() {
   const [newPatPhone, setNewPatPhone] = useState('');
   const [newPatAllergies, setNewPatAllergies] = useState('');
   const [newPatRiskLevel, setNewPatRiskLevel] = useState<'Bajo Riesgo' | 'Medio Riesgo' | 'Alto Riesgo'>('Bajo Riesgo');
+
+  // Formulario de edición de paciente
+  const [editPatName, setEditPatName] = useState('');
+  const [editPatDob, setEditPatDob] = useState('');
+  const [editPatAge, setEditPatAge] = useState(30);
+  const [editPatPhone, setEditPatPhone] = useState('');
+  const [editPatAllergies, setEditPatAllergies] = useState('');
+  const [editPatRiskLevel, setEditPatRiskLevel] = useState<'Bajo Riesgo' | 'Medio Riesgo' | 'Alto Riesgo'>('Bajo Riesgo');
+
+  const onOpenEditPatientModal = (patient: Patient) => {
+    setEditingPatient(patient);
+    setEditPatName(patient.name);
+    setEditPatDob(patient.dob);
+    setEditPatAge(patient.age);
+    setEditPatPhone(patient.phone);
+    setEditPatAllergies(patient.allergies || '');
+    setEditPatRiskLevel(patient.riskLevel);
+    setEditPatientModalOpen(true);
+  };
+
+  const handleEditPatient = async (e: FormEvent) => {
+    e.preventDefault();
+    if (!editingPatient) return;
+    try {
+      const initials = editPatName.trim().split(/\s+/).map(w => w[0]).join('').toUpperCase().slice(0, 2) || 'P';
+      const updated = await updatePatient(editingPatient.id, {
+        name: editPatName,
+        initials,
+        dob: editPatDob,
+        age: editPatAge,
+        phone: editPatPhone,
+        allergies: editPatAllergies || undefined,
+        riskLevel: editPatRiskLevel,
+      });
+      // Sincronizar en el estado local de pacientes
+      setPatients(patients.map(p => p.id === updated.id ? updated : p));
+      setEditPatientModalOpen(false);
+      setEditingPatient(null);
+      alert(`¡Ficha de "${updated.name}" modificada correctamente!`);
+    } catch (err: any) {
+      alert(`Error al modificar paciente: ${err.message}`);
+    }
+  };
+
+  const handleScheduleForPatient = (patientId: string) => {
+    setNewApptPatientId(patientId);
+    setAppointmentModalOpen(true);
+  };
 
   const handleCreatePatient = async (e: FormEvent) => {
     e.preventDefault();
@@ -265,6 +318,17 @@ export default function App() {
         );
       case 'patients':
         return (
+          <PatientsView 
+            patients={patients}
+            setSelectedPatientId={setSelectedPatientId}
+            setCurrentTab={setCurrentTab}
+            onOpenPatientModal={() => setPatientModalOpen(true)}
+            onOpenEditPatientModal={onOpenEditPatientModal}
+            onScheduleForPatient={handleScheduleForPatient}
+          />
+        );
+      case 'odontogram':
+        return (
           <OdontogramaView 
             activePatient={activePatientObj}
             onAddTreatmentItem={handleAddTreatmentItem}
@@ -338,7 +402,7 @@ export default function App() {
                   const descLower = n.desc.toLowerCase();
                   const handleNotificationClick = () => {
                     if (titleLower.includes('ficha') || titleLower.includes('paciente') || descLower.includes('expediente')) {
-                      setCurrentTab('patients');
+                      setCurrentTab('odontogram');
                     } else if (titleLower.includes('cita') || titleLower.includes('reserva') || titleLower.includes('programada')) {
                       setCurrentTab('calendar');
                     } else if (titleLower.includes('presupuesto')) {
@@ -569,7 +633,8 @@ export default function App() {
                 <nav className="space-y-2">
                   {[
                     { id: 'dashboard', label: 'Panel Control', icon: LayoutDashboard },
-                    { id: 'patients', label: 'Odontograma', icon: Users },
+                    { id: 'patients', label: 'Pacientes', icon: Users },
+                    { id: 'odontogram', label: 'Odontograma', icon: Stethoscope },
                     { id: 'calendar', label: 'Calendario', icon: CalendarDays },
                     { id: 'presupuestos', label: 'Presupuestos', icon: FileText },
                     { id: 'radiology', label: 'Radiología', icon: Activity },
@@ -722,6 +787,8 @@ export default function App() {
                         else if (e.target.value === '11:45 AM') setNewApptHour(11.75);
                         else if (e.target.value === '01:00 PM') setNewApptHour(13.0);
                         else if (e.target.value === '02:15 PM') setNewApptHour(14.25);
+                        else if (e.target.value === '03:30 PM') setNewApptHour(15.5);
+                        else if (e.target.value === '04:45 PM') setNewApptHour(16.75);
                       }}
                       className="w-full border border-slate-200 dark:border-slate-800 rounded-lg p-2.5 bg-white dark:bg-slate-900 text-slate-855 dark:text-white"
                     >
@@ -730,6 +797,8 @@ export default function App() {
                       <option value="11:45 AM">11:45 AM</option>
                       <option value="01:00 PM">01:00 PM</option>
                       <option value="02:15 PM">02:15 PM (Horario Disponible)</option>
+                      <option value="03:30 PM">03:30 PM</option>
+                      <option value="04:45 PM">04:45 PM</option>
                     </select>
                   </div>
                 </div>
@@ -867,6 +936,129 @@ export default function App() {
                   <button 
                     type="button"
                     onClick={() => setPatientModalOpen(false)}
+                    className="bg-slate-100 hover:bg-slate-200 text-slate-700 py-2.5 px-4 rounded-lg cursor-pointer transition-colors"
+                  >
+                    Cancelar
+                  </button>
+                </div>
+
+              </form>
+
+            </div>
+          </div>
+        )}
+
+        {/* MODAL DE EDICIÓN DE PACIENTE */}
+        {editPatientModalOpen && editingPatient && (
+          <div className="fixed inset-0 bg-slate-950/50 backdrop-blur-xs flex items-center justify-center z-50 p-4">
+            <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-6 max-w-md w-full shadow-2xl animate-in zoom-in-95 duration-120 font-sans text-xs">
+              
+              {/* Encabezado del Modal */}
+              <div className="flex justify-between items-center pb-3 border-b border-slate-100 dark:border-slate-800 mb-4">
+                <h3 className="text-sm font-bold text-slate-900 dark:text-white uppercase tracking-wider flex items-center gap-1.5">
+                  <Edit className="w-5 h-5 text-blue-600 dark:text-blue-450" />
+                  Modificar Expediente de Paciente
+                </h3>
+                <button 
+                  onClick={() => { setEditPatientModalOpen(false); setEditingPatient(null); }}
+                  className="text-slate-400 hover:text-slate-600 dark:hover:text-white shrink-0 cursor-pointer"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              {/* Formulario */}
+              <form onSubmit={handleEditPatient} className="space-y-4 font-sans text-xs">
+                
+                {/* Nombre completo */}
+                <div>
+                  <label className="block text-[10px] font-sans font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1">Nombre Completo</label>
+                  <input 
+                    type="text" 
+                    value={editPatName}
+                    onChange={(e) => setEditPatName(e.target.value)}
+                    className="w-full border border-slate-200 dark:border-slate-800 rounded-lg p-2.5 bg-white dark:bg-slate-900 text-slate-850 dark:text-white outline-none focus:border-blue-600" 
+                    placeholder="Ej. Juan Pérez Gómez"
+                    required
+                  />
+                </div>
+
+                {/* Fecha de Nacimiento y Edad */}
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-[10px] font-sans font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1">Fecha de Nacimiento</label>
+                    <input 
+                      type="text" 
+                      value={editPatDob}
+                      onChange={(e) => setEditPatDob(e.target.value)}
+                      className="w-full border border-slate-200 dark:border-slate-800 rounded-lg p-2.5 bg-white dark:bg-slate-900 text-slate-850 dark:text-white outline-none focus:border-blue-600" 
+                      placeholder="Ej. 12 Oct 1985"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[10px] font-sans font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1">Edad</label>
+                    <input 
+                      type="number" 
+                      value={editPatAge}
+                      onChange={(e) => setEditPatAge(Number(e.target.value))}
+                      className="w-full border border-slate-200 dark:border-slate-800 rounded-lg p-2.5 bg-white dark:bg-slate-900 text-slate-850 dark:text-white outline-none focus:border-blue-600" 
+                      min={0}
+                      max={130}
+                      required
+                    />
+                  </div>
+                </div>
+
+                {/* Teléfono */}
+                <div>
+                  <label className="block text-[10px] font-sans font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1">Teléfono</label>
+                  <input 
+                    type="text" 
+                    value={editPatPhone}
+                    onChange={(e) => setEditPatPhone(e.target.value)}
+                    className="w-full border border-slate-200 dark:border-slate-800 rounded-lg p-2.5 bg-white dark:bg-slate-900 text-slate-855 dark:text-white outline-none focus:border-blue-600" 
+                    placeholder="Ej. +52 55 1234 5678"
+                    required
+                  />
+                </div>
+
+                {/* Alergias */}
+                <div>
+                  <label className="block text-[10px] font-sans font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1">Alergias (Opcional)</label>
+                  <input 
+                    type="text" 
+                    value={editPatAllergies}
+                    onChange={(e) => setEditPatAllergies(e.target.value)}
+                    className="w-full border border-slate-200 dark:border-slate-800 rounded-lg p-2.5 bg-white dark:bg-slate-900 text-slate-855 dark:text-white outline-none focus:border-blue-600" 
+                    placeholder="Ej. Látex, Penicilina (dejar vacío si no tiene)"
+                  />
+                </div>
+
+                {/* Nivel de Riesgo */}
+                <div>
+                  <label className="block text-[10px] font-sans font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1">Nivel de Riesgo Clínico</label>
+                  <select 
+                    value={editPatRiskLevel}
+                    onChange={(e) => setEditPatRiskLevel(e.target.value as any)}
+                    className="w-full border border-slate-200 dark:border-slate-800 rounded-lg p-2.5 bg-white dark:bg-slate-900 text-slate-855 dark:text-white outline-none focus:border-blue-600"
+                  >
+                    <option value="Bajo Riesgo">Bajo Riesgo</option>
+                    <option value="Medio Riesgo">Medio Riesgo</option>
+                    <option value="Alto Riesgo">Alto Riesgo</option>
+                  </select>
+                </div>
+
+                <div className="flex justify-end gap-2.5 pt-4">
+                  <button 
+                    type="submit"
+                    className="flex-grow bg-blue-600 hover:bg-blue-700 text-white font-sans font-bold py-2.5 px-4 rounded-lg uppercase cursor-pointer transition-colors"
+                  >
+                    Guardar Cambios
+                  </button>
+                  <button 
+                    type="button"
+                    onClick={() => { setEditPatientModalOpen(false); setEditingPatient(null); }}
                     className="bg-slate-100 hover:bg-slate-200 text-slate-700 py-2.5 px-4 rounded-lg cursor-pointer transition-colors"
                   >
                     Cancelar

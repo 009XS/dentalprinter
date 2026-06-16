@@ -80,9 +80,10 @@ function mapPatient(patient: Awaited<ReturnType<typeof prisma.patient.findMany>>
   };
 }
 
-function mapAppointment(appointment: Awaited<ReturnType<typeof prisma.appointment.findMany>>[number]): Appointment {
+function mapAppointment(appointment: any): Appointment {
   return {
     ...appointment,
+    patient: mapPatient(appointment.patient),
     status: appointment.status as Appointment['status'],
     doctor: appointment.doctor as Appointment['doctor'],
     createdAt: toIso(appointment.createdAt),
@@ -116,7 +117,7 @@ export async function readData(): Promise<ClinicData> {
   const [users, patients, appointments, chats, budgets, odontograms, notifications, auditLogs, settings] = await Promise.all([
     prisma.user.findMany({ orderBy: { createdAt: 'asc' } }),
     prisma.patient.findMany({ orderBy: { createdAt: 'asc' } }),
-    prisma.appointment.findMany({ orderBy: { createdAt: 'asc' } }),
+    prisma.appointment.findMany({ include: { patient: true }, orderBy: { createdAt: 'asc' } }),
     prisma.chat.findMany({ orderBy: { updatedAt: 'desc' } }),
     prisma.budget.findMany({ include: { items: true }, orderBy: { createdAt: 'desc' } }),
     prisma.odontogram.findMany(),

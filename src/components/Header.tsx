@@ -196,7 +196,7 @@ export default function Header({
                       const titleLower = n.title.toLowerCase();
                       const descLower = n.desc.toLowerCase();
                       if (titleLower.includes('ficha') || titleLower.includes('paciente') || descLower.includes('expediente')) {
-                        setCurrentTab('patients');
+                        setCurrentTab('odontogram');
                       } else if (titleLower.includes('cita') || titleLower.includes('reserva') || titleLower.includes('programada')) {
                         setCurrentTab('calendar');
                       } else if (titleLower.includes('presupuesto')) {

@@ -31,6 +31,7 @@ export interface Appointment {
   id: string;
   time: string;
   patientId: string;
+  patient: Patient;
   treatment: string;
   status: AppointmentStatus;
   doctor: Doctor;
