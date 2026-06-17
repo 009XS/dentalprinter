@@ -8,14 +8,33 @@ export interface Patient {
   phone: string;
   allergies?: string;
   riskLevel: 'Bajo Riesgo' | 'Medio Riesgo' | 'Alto Riesgo';
+  status: 'Activo' | 'Inactivo' | 'Archivado';
+  medicalHistory?: MedicalHistory;
+  attachments?: ClinicalAttachment[];
 }
 
-export type AppointmentStatus = 'Confirmada' | 'En Espera' | 'Atrasada' | 'Pendiente';
+export interface MedicalHistory {
+  patientId: string;
+  allergies?: string;
+  medications?: string;
+  diseases?: string;
+  surgeries?: string;
+  observations?: string;
+  officialSections?: string;
+  flexibleSections?: string; // JSON string
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+
+export type AppointmentStatus = 'Confirmada' | 'En Espera' | 'Atrasada' | 'Pendiente' | 'Cancelada';
 
 export interface Appointment {
   id: string;
+  date: string;
   time: string;
-  patient: Patient;
+  patientId?: string;
+  patient?: Patient;
   treatment: string;
   status: AppointmentStatus;
   doctor: 'Dr. Pérez' | 'Dra. Gómez' | 'Higiene 1';
@@ -67,3 +86,19 @@ export interface ToothState {
   hasImplant: boolean;
   isSelected?: boolean;
 }
+
+export interface ClinicalAttachment {
+  id: string;
+  patientId: string;
+  fileName: string;
+  originalName: string;
+  mimeType: string;
+  sizeBytes: number;
+  filePath?: string;
+  category: string;
+  description?: string;
+  uploadedBy?: string;
+  createdAt: string;
+  url?: string;
+}
+

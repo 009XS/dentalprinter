@@ -9,7 +9,9 @@ import {
   Bell, 
   Plus,
   LogOut,
-  Stethoscope
+  Stethoscope,
+  CalendarDays,
+  Folder
 } from 'lucide-react';
 
 interface SidebarProps {
@@ -34,6 +36,8 @@ export default function Sidebar({
   const navItems = [
     { id: 'dashboard', label: 'Panel Control', icon: LayoutDashboard },
     { id: 'patients', label: 'Pacientes', icon: Users },
+    { id: 'archivero', label: 'Archivero', icon: Folder },
+    { id: 'appointments', label: 'Citas', icon: CalendarDays },
     { id: 'odontogram', label: 'Odontograma', icon: Stethoscope },
     { id: 'calendar', label: 'Calendario', icon: Calendar },
     { id: 'presupuestos', label: 'Presupuestos', icon: FileText },

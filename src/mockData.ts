@@ -11,6 +11,7 @@ export const initialPatients: Patient[] = [
     phone: '+1 (555) 019-2834',
     allergies: 'Penicilina',
     riskLevel: 'Bajo Riesgo',
+    status: 'Activo',
   },
   {
     id: 'DP-2023-1102',
@@ -21,6 +22,7 @@ export const initialPatients: Patient[] = [
     phone: '+1 (555) 021-9988',
     allergies: 'Látex',
     riskLevel: 'Bajo Riesgo',
+    status: 'Activo',
   },
   {
     id: 'DP-2023-4561',
@@ -32,6 +34,7 @@ export const initialPatients: Patient[] = [
     phone: '+1 (555) 091-2331',
     allergies: undefined,
     riskLevel: 'Medio Riesgo',
+    status: 'Activo',
   },
   {
     id: 'DP-2023-0941',
@@ -42,6 +45,7 @@ export const initialPatients: Patient[] = [
     phone: '+1 (555) 102-4581',
     allergies: 'Sulfamidas',
     riskLevel: 'Bajo Riesgo',
+    status: 'Activo',
   },
   {
     id: 'DP-2023-8821',
@@ -53,6 +57,7 @@ export const initialPatients: Patient[] = [
     phone: '+1 (555) 234-5678',
     allergies: undefined,
     riskLevel: 'Alto Riesgo',
+    status: 'Activo',
   },
   {
     id: 'DP-2023-3881',
@@ -63,12 +68,14 @@ export const initialPatients: Patient[] = [
     phone: '+1 (555) 881-2356',
     allergies: undefined,
     riskLevel: 'Bajo Riesgo',
+    status: 'Activo',
   }
 ];
 
 export const initialAppointments: Appointment[] = [
   {
     id: 'appt-1',
+    date: '2026-06-16',
     time: '09:00 AM',
     patient: initialPatients[1], // Elena Martínez
     treatment: 'Tratamiento de Conducto',
@@ -79,6 +86,7 @@ export const initialAppointments: Appointment[] = [
   },
   {
     id: 'appt-2',
+    date: '2026-06-16',
     time: '10:30 AM',
     patient: initialPatients[2], // David Chen
     treatment: 'Limpieza e Inspección',
@@ -89,6 +97,7 @@ export const initialAppointments: Appointment[] = [
   },
   {
     id: 'appt-3',
+    date: '2026-06-16',
     time: '11:15 AM',
     patient: initialPatients[3], // Sofía Jenkins
     treatment: 'Evaluación de Blanqueamiento',
@@ -99,6 +108,7 @@ export const initialAppointments: Appointment[] = [
   },
   {
     id: 'appt-4',
+    date: '2026-06-16',
     time: '01:00 PM',
     patient: initialPatients[4], // María García
     treatment: 'Control de Implante',
@@ -109,6 +119,7 @@ export const initialAppointments: Appointment[] = [
   },
   {
     id: 'appt-5',
+    date: '2026-06-16',
     time: '08:45 AM',
     patient: {
       id: 'DP-2023-7721',
@@ -118,6 +129,7 @@ export const initialAppointments: Appointment[] = [
       age: 36,
       phone: '+1 (555) 332-9012',
       riskLevel: 'Bajo Riesgo',
+      status: 'Activo',
     },
     treatment: 'Revisión y Limpieza General',
     status: 'Confirmada',
@@ -127,6 +139,7 @@ export const initialAppointments: Appointment[] = [
   },
   {
     id: 'appt-6',
+    date: '2026-06-16',
     time: '10:00 AM',
     patient: initialPatients[0], // Carlos Mendoza
     treatment: 'Tratamiento de Conducto',
@@ -137,6 +150,7 @@ export const initialAppointments: Appointment[] = [
   },
   {
     id: 'appt-7',
+    date: '2026-06-16',
     time: '01:00 PM',
     patient: {
       id: 'DP-2023-5542',
@@ -146,6 +160,7 @@ export const initialAppointments: Appointment[] = [
       age: 42,
       phone: '+1 (555) 234-9000',
       riskLevel: 'Medio Riesgo',
+      status: 'Activo',
     },
     treatment: 'Ajuste de Ortodoncia',
     status: 'Confirmada',
@@ -155,6 +170,7 @@ export const initialAppointments: Appointment[] = [
   },
   {
     id: 'appt-8',
+    date: '2026-06-16',
     time: '08:15 AM',
     patient: {
       id: 'DP-2023-0091',
@@ -164,6 +180,7 @@ export const initialAppointments: Appointment[] = [
       age: 46,
       phone: '+1 (555) 909-1234',
       riskLevel: 'Bajo Riesgo',
+      status: 'Activo',
     },
     treatment: 'Limpieza Dental',
     status: 'Confirmada',

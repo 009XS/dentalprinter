@@ -1,4 +1,4 @@
-import type { Appointment, Budget, BudgetItem, Patient } from './types';
+import type { Appointment, Budget, BudgetItem, Patient, MedicalHistory, ClinicalAttachment } from './types';
 
 const API_BASE = import.meta.env.VITE_API_BASE || '/api';
 const TOKEN_KEY = 'dentalprinter.session';
@@ -85,6 +85,7 @@ export async function updatePatient(id: string, input: Partial<Patient>) {
 }
 
 export async function createAppointment(input: {
+  date: string;
   time: string;
   patientId: string;
   treatment: string;
@@ -125,6 +126,18 @@ export async function saveOdontogram(patientId: string, odontogram: any) {
   return request<any>(`/odontograms/${patientId}`, { method: 'PUT', body: JSON.stringify(odontogram) });
 }
 
+export async function getMedicalHistory(patientId: string) {
+  return request<MedicalHistory>(`/patients/${patientId}/medical-history`);
+}
+
+export async function updateMedicalHistory(patientId: string, payload: Partial<MedicalHistory>) {
+  return request<MedicalHistory>(`/patients/${patientId}/medical-history`, {
+    method: 'PUT',
+    body: JSON.stringify(payload),
+  });
+}
+
+
 export async function getSettings() {
   return request<any>('/settings');
 }
@@ -152,3 +165,43 @@ export async function updateChat(id: string, input: {
 }) {
   return request<any>(`/chats/${id}`, { method: 'PUT', body: JSON.stringify(input) });
 }
+
+export async function getPatientAttachments(patientId: string): Promise<ClinicalAttachment[]> {
+  return request<ClinicalAttachment[]>(`/patients/${patientId}/attachments`);
+}
+
+export async function uploadPatientAttachment(
+  patientId: string,
+  file: File,
+  category: string,
+  description?: string
+): Promise<ClinicalAttachment> {
+  const formData = new FormData();
+  formData.append('file', file);
+  formData.append('category', category);
+  if (description) {
+    formData.append('description', description);
+  }
+
+  const token = getToken();
+  const headers = new Headers();
+  if (token) headers.set('Authorization', `Bearer ${token}`);
+
+  const response = await fetch(`${API_BASE}/patients/${patientId}/attachments`, {
+    method: 'POST',
+    headers,
+    body: formData
+  });
+
+  if (!response.ok) {
+    const payload = await response.json().catch(() => ({ error: response.statusText }));
+    throw new Error(payload.error || 'Upload failed');
+  }
+
+  return response.json();
+}
+
+export async function deleteAttachment(attachmentId: string): Promise<void> {
+  return request<void>(`/attachments/${attachmentId}`, { method: 'DELETE' });
+}
+

@@ -9,3 +9,6 @@ prisma/*.db-journal
 *.log
 .env*
 !.env.example
+backup/
+backups-auto/
+uploads/

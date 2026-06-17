@@ -29,6 +29,8 @@ import PresupuestosView from './components/PresupuestosView';
 import RadiologyView from './components/RadiologyView';
 import SettingsView from './components/SettingsView';
 import PatientsView from './components/PatientsView';
+import AppointmentsView from './components/AppointmentsView';
+import ArchiveroView from './components/ArchiveroView';
 import { getToken, setToken, bootstrap, login, logout, createAppointment, createPatient, updatePatient, markNotificationsRead } from './api';
 
 interface Toast {
@@ -125,6 +127,23 @@ export default function App() {
       });
   }, [token]);
 
+  // Recargar datos clínicos al cambiar a pestañas que muestran presupuestos/citas para asegurar reactividad
+  useEffect(() => {
+    if (!token) return;
+    if (currentTab === 'archivero' || currentTab === 'presupuestos') {
+      bootstrap()
+        .then(data => {
+          setPatients(data.patients || []);
+          setAppointments(data.appointments || []);
+          setBudgets(data.budgets || []);
+        })
+        .catch(err => {
+          console.error('Error al actualizar datos en cambio de pestaña:', err);
+        });
+    }
+  }, [currentTab, token]);
+
+
   const handleLoginSubmit = async (e: FormEvent) => {
     e.preventDefault();
     setLoginError('');
@@ -215,6 +234,16 @@ export default function App() {
     setAppointmentModalOpen(true);
   };
 
+  const handleUpdatePatientStatus = async (patientId: string, newStatus: 'Activo' | 'Inactivo' | 'Archivado') => {
+    try {
+      const updated = await updatePatient(patientId, { status: newStatus });
+      setPatients(patients.map(p => p.id === patientId ? { ...p, status: newStatus } : p));
+      showToast(`Estado del paciente actualizado a "${newStatus}"`, 'success');
+    } catch (err: any) {
+      showToast(`Error al actualizar estado del paciente: ${err.message}`, 'error');
+    }
+  };
+
   const handleCreatePatient = async (e: FormEvent) => {
     e.preventDefault();
     try {
@@ -227,6 +256,7 @@ export default function App() {
         phone: newPatPhone,
         allergies: newPatAllergies || undefined,
         riskLevel: newPatRiskLevel,
+        status: 'Activo',
       });
       setPatients([created, ...patients]);
       setSelectedPatientId(created.id);
@@ -254,6 +284,7 @@ export default function App() {
   const [newApptDoctor, setNewApptDoctor] = useState<'Dr. Pérez' | 'Dra. Gómez' | 'Higiene 1'>('Dr. Pérez');
   const [newApptTime, setNewApptTime] = useState<string>('02:15 PM');
   const [newApptHour, setNewApptHour] = useState<number>(14.25); // 02:15 PM decimal 24H
+  const [newApptDate, setNewApptDate] = useState<string>(new Date().toISOString().split('T')[0]);
 
   // Sincronizar nuevo ID de paciente por defecto en formulario de cita
   useEffect(() => {
@@ -268,6 +299,7 @@ export default function App() {
     if (!patientObj) return;
 
     createAppointment({
+      date: newApptDate,
       time: newApptTime,
       patientId: newApptPatientId,
       treatment: newApptTreatment,
@@ -340,6 +372,8 @@ export default function App() {
             setSelectedPatientId={setSelectedPatientId}
             searchQuery={searchQuery}
             showToast={showToast}
+            onOpenAppointmentModal={() => setAppointmentModalOpen(true)}
+            onOpenPatientModal={() => setPatientModalOpen(true)}
           />
         );
       case 'patients':
@@ -351,7 +385,33 @@ export default function App() {
             onOpenPatientModal={() => setPatientModalOpen(true)}
             onOpenEditPatientModal={onOpenEditPatientModal}
             onScheduleForPatient={handleScheduleForPatient}
+            onUpdatePatientStatus={handleUpdatePatientStatus}
             showToast={showToast}
+          />
+        );
+      case 'archivero':
+        return (
+          <ArchiveroView 
+            patients={patients}
+            appointments={appointments}
+            budgets={budgets}
+            liveItems={liveItems}
+            selectedPatientId={selectedPatientId}
+            setSelectedPatientId={setSelectedPatientId}
+            setCurrentTab={setCurrentTab}
+            showToast={showToast}
+            onOpenPatientModal={() => setPatientModalOpen(true)}
+          />
+        );
+      case 'appointments':
+        return (
+          <AppointmentsView 
+            appointments={appointments}
+            setAppointments={setAppointments}
+            patients={patients}
+            showToast={showToast}
+            setSelectedPatientId={setSelectedPatientId}
+            setCurrentTab={setCurrentTab}
           />
         );
       case 'odontogram':
@@ -787,6 +847,18 @@ export default function App() {
                     onChange={(e) => setNewApptTreatment(e.target.value)}
                     className="w-full border border-slate-200 dark:border-slate-800 rounded-lg p-2.5 bg-white dark:bg-slate-900 text-slate-855 dark:text-white outline-none focus:border-blue-600" 
                     placeholder="Ej. Resina Estética, Blanqueamiento, Limpieza"
+                    required
+                  />
+                </div>
+
+                {/* Fecha Consulta */}
+                <div>
+                  <label className="block text-[10px] font-sans font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1">Fecha Consulta</label>
+                  <input 
+                    type="date" 
+                    value={newApptDate}
+                    onChange={(e) => setNewApptDate(e.target.value)}
+                    className="w-full border border-slate-200 dark:border-slate-800 rounded-lg p-2.5 bg-white dark:bg-slate-900 text-slate-855 dark:text-white outline-none focus:border-blue-600" 
                     required
                   />
                 </div>

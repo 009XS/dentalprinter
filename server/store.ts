@@ -75,6 +75,7 @@ function mapPatient(patient: Awaited<ReturnType<typeof prisma.patient.findMany>>
     avatar: patient.avatar || undefined,
     allergies: patient.allergies || undefined,
     riskLevel: patient.riskLevel as Patient['riskLevel'],
+    status: patient.status as Patient['status'],
     createdAt: toIso(patient.createdAt),
     updatedAt: toIso(patient.updatedAt),
   };

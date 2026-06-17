@@ -7,6 +7,9 @@ import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { v4 as uuid } from 'uuid';
 import { z } from 'zod';
+import path from 'path';
+import fs from 'fs';
+import multer from 'multer';
 import { readData } from './store';
 import { prisma } from './db';
 import type { Appointment, Budget, BudgetItem, Doctor, Patient, Role, User } from './types';
@@ -106,9 +109,11 @@ const patientSchema = z.object({
   phone: z.string().min(7).max(40),
   allergies: z.string().max(200).optional(),
   riskLevel: z.enum(['Bajo Riesgo', 'Medio Riesgo', 'Alto Riesgo']),
+  status: z.enum(['Activo', 'Inactivo', 'Archivado']).default('Activo'),
 });
 
 const appointmentSchema = z.object({
+  date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
   time: z.string().min(4).max(20),
   patientId: z.string().min(1),
   treatment: z.string().min(2).max(200),
@@ -132,6 +137,17 @@ const budgetSchema = z.object({
   discountPercent: z.number().min(0).max(100).default(0),
   items: z.array(budgetItemSchema).default([]),
 });
+
+const medicalHistorySchema = z.object({
+  allergies: z.string().max(1000).optional().nullable(),
+  medications: z.string().max(1000).optional().nullable(),
+  diseases: z.string().max(1000).optional().nullable(),
+  surgeries: z.string().max(1000).optional().nullable(),
+  observations: z.string().max(5000).optional().nullable(),
+  officialSections: z.string().max(1000000).optional().default("{}"),
+  flexibleSections: z.string().max(10000).optional().default("{}"),
+});
+
 
 app.get('/api/health', (_req, res) => {
   res.json({ ok: true, service: 'dentalprinter-api', time: now() });
@@ -184,6 +200,7 @@ app.post('/api/patients', requireAuth, requireRole('admin', 'doctor', 'recepcion
       phone: body.phone,
       allergies: body.allergies || null,
       riskLevel: body.riskLevel,
+      status: body.status,
     }
   });
 
@@ -208,6 +225,103 @@ app.put('/api/patients/:id', requireAuth, requireRole('admin', 'doctor', 'recepc
   res.json(updated);
 }));
 
+app.get('/api/patients/:patientId/medical-history', requireAuth, asyncHandler(async (req, res) => {
+  const { patientId } = req.params;
+  
+  const patientExists = await prisma.patient.findUnique({ where: { id: patientId } });
+  if (!patientExists) {
+    return res.status(404).json({ error: 'Paciente no encontrado' });
+  }
+
+  const history = await prisma.medicalHistory.findUnique({
+    where: { patientId }
+  });
+
+  if (!history) {
+    return res.json({
+      patientId,
+      allergies: '',
+      medications: '',
+      diseases: '',
+      surgeries: '',
+      observations: '',
+      officialSections: '{}',
+      flexibleSections: '{}'
+    });
+  }
+
+  res.json(history);
+}));
+
+app.put('/api/patients/:patientId/medical-history', requireAuth, requireRole('admin', 'doctor', 'recepcionista'), asyncHandler(async (req, res) => {
+  const { patientId } = req.params;
+  const body = medicalHistorySchema.parse(req.body);
+
+  const patientExists = await prisma.patient.findUnique({ where: { id: patientId } });
+  if (!patientExists) {
+    return res.status(404).json({ error: 'Paciente no encontrado' });
+  }
+
+  const currentHistory = await prisma.medicalHistory.findUnique({
+    where: { patientId }
+  });
+
+  let mergedOfficial = '{}';
+  if (currentHistory && currentHistory.officialSections) {
+    try {
+      const currentParsed = JSON.parse(currentHistory.officialSections);
+      const incomingParsed = typeof body.officialSections === 'string'
+        ? JSON.parse(body.officialSections)
+        : body.officialSections || {};
+      
+      const mergedObj = {
+        ...currentParsed,
+        ...incomingParsed
+      };
+      mergedOfficial = JSON.stringify(mergedObj);
+    } catch {
+      mergedOfficial = body.officialSections || '{}';
+    }
+  } else {
+    try {
+      if (body.officialSections) {
+        JSON.parse(body.officialSections);
+        mergedOfficial = body.officialSections;
+      }
+    } catch {
+      return res.status(400).json({ error: 'officialSections debe ser una cadena JSON válida' });
+    }
+  }
+
+  const updated = await prisma.medicalHistory.upsert({
+    where: { patientId },
+    create: {
+      patientId,
+      allergies: body.allergies || null,
+      medications: body.medications || null,
+      diseases: body.diseases || null,
+      surgeries: body.surgeries || null,
+      observations: body.observations || null,
+      officialSections: mergedOfficial,
+      flexibleSections: body.flexibleSections || '{}',
+    },
+    update: {
+      allergies: body.allergies !== undefined ? (body.allergies || null) : undefined,
+      medications: body.medications !== undefined ? (body.medications || null) : undefined,
+      diseases: body.diseases !== undefined ? (body.diseases || null) : undefined,
+      surgeries: body.surgeries !== undefined ? (body.surgeries || null) : undefined,
+      observations: body.observations !== undefined ? (body.observations || null) : undefined,
+      officialSections: mergedOfficial,
+      flexibleSections: body.flexibleSections !== undefined ? (body.flexibleSections || '{}') : undefined,
+    }
+  });
+
+  await audit(req, 'update', 'medical_history', patientId);
+
+  res.json(updated);
+}));
+
+
 app.get('/api/appointments', requireAuth, asyncHandler(async (_req, res) => {
   const appointments = await prisma.appointment.findMany({
     include: { patient: true },
@@ -224,10 +338,11 @@ app.post('/api/appointments', requireAuth, requireRole('admin', 'doctor', 'recep
     return res.status(404).json({ error: 'Paciente no encontrado' });
   }
 
-  // Verificar solapamiento para el mismo doctor y citas activas (no canceladas)
+  // Verificar solapamiento para el mismo doctor, la misma fecha y citas activas (no canceladas)
   const doctorAppointments = await prisma.appointment.findMany({
     where: {
       doctor: body.doctor,
+      date: body.date,
       status: { not: 'Cancelada' }
     }
   });
@@ -244,6 +359,7 @@ app.post('/api/appointments', requireAuth, requireRole('admin', 'doctor', 'recep
   const created = await prisma.appointment.create({
     data: {
       id: uuid(),
+      date: body.date,
       time: body.time,
       patientId: body.patientId,
       treatment: body.treatment,
@@ -506,6 +622,188 @@ app.put('/api/settings', requireAuth, requireRole('admin'), asyncHandler(async (
   });
 
   res.json(settings);
+}));
+
+// Multer Configuration for Clinical Attachments
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    const { patientId } = req.params;
+    const uploadDir = path.join(process.cwd(), 'uploads', 'patients', patientId);
+    if (!fs.existsSync(uploadDir)) {
+      fs.mkdirSync(uploadDir, { recursive: true });
+    }
+    cb(null, uploadDir);
+  },
+  filename: (req, file, cb) => {
+    const ext = path.extname(file.originalname).toLowerCase();
+    const secureName = `${uuid()}${ext}`;
+    cb(null, secureName);
+  }
+});
+
+const upload = multer({
+  storage,
+  limits: {
+    fileSize: 10 * 1024 * 1024, // 10MB
+  },
+  fileFilter: (req, file, cb) => {
+    const allowedMimeTypes = ['image/jpeg', 'image/png', 'image/webp', 'application/pdf'];
+    if (!allowedMimeTypes.includes(file.mimetype)) {
+      return cb(new Error('MIME_NOT_ALLOWED'));
+    }
+    const ext = path.extname(file.originalname).toLowerCase();
+    const forbiddenExts = ['.exe', '.bat', '.cmd', '.js', '.html', '.htm', '.sh', '.com', '.msi', '.vbs'];
+    if (forbiddenExts.includes(ext) || !ext) {
+      return cb(new Error('EXT_NOT_ALLOWED'));
+    }
+    cb(null, true);
+  }
+});
+
+const uploadSingle = upload.single('file');
+
+// Endpoints for Clinical Attachments
+
+// 1. List attachments
+app.get('/api/patients/:patientId/attachments', requireAuth, asyncHandler(async (req, res) => {
+  const { patientId } = req.params;
+  const patient = await prisma.patient.findUnique({ where: { id: patientId } });
+  if (!patient) {
+    return res.status(404).json({ error: 'Paciente no encontrado' });
+  }
+
+  const attachments = await prisma.clinicalAttachment.findMany({
+    where: { patientId },
+    orderBy: { createdAt: 'desc' }
+  });
+
+  const attachmentsWithUrl = attachments.map(att => ({
+    id: att.id,
+    patientId: att.patientId,
+    fileName: att.fileName,
+    originalName: att.originalName,
+    mimeType: att.mimeType,
+    sizeBytes: att.sizeBytes,
+    category: att.category,
+    description: att.description,
+    uploadedBy: att.uploadedBy,
+    createdAt: att.createdAt.toISOString(),
+    url: `/api/attachments/${att.id}/file`
+  }));
+
+  res.json(attachmentsWithUrl);
+}));
+
+// 2. Upload attachment
+app.post('/api/patients/:patientId/attachments', requireAuth, requireRole('admin', 'doctor', 'recepcionista'), (req, res, next) => {
+  uploadSingle(req, res, (err) => {
+    if (err) {
+      if (err.code === 'LIMIT_FILE_SIZE') {
+        return res.status(400).json({ error: 'El archivo supera el tamaño permitido.' });
+      }
+      if (err.message === 'MIME_NOT_ALLOWED' || err.message === 'EXT_NOT_ALLOWED') {
+        return res.status(400).json({ error: 'Formato no permitido.' });
+      }
+      return res.status(400).json({ error: 'No se pudo subir el archivo.' });
+    }
+    next();
+  });
+}, asyncHandler(async (req, res) => {
+  const { patientId } = req.params;
+  const { category, description } = req.body;
+  const file = req.file;
+
+  if (!file) {
+    return res.status(400).json({ error: 'No se ha subido ningún archivo.' });
+  }
+
+  const patient = await prisma.patient.findUnique({ where: { id: patientId } });
+  if (!patient) {
+    if (fs.existsSync(file.path)) {
+      fs.unlinkSync(file.path);
+    }
+    return res.status(404).json({ error: 'Paciente no encontrado.' });
+  }
+
+  const attachment = await prisma.clinicalAttachment.create({
+    data: {
+      id: uuid(),
+      patientId,
+      fileName: file.filename,
+      originalName: file.originalname,
+      mimeType: file.mimetype,
+      sizeBytes: file.size,
+      filePath: file.path,
+      category: category || 'General',
+      description: description || null,
+      uploadedBy: req.user?.name || req.user?.email || null,
+    }
+  });
+
+  await audit(req, 'upload_attachment', 'clinical_attachment', attachment.id);
+
+  res.status(201).json({
+    id: attachment.id,
+    patientId: attachment.patientId,
+    fileName: attachment.fileName,
+    originalName: attachment.originalName,
+    mimeType: attachment.mimeType,
+    sizeBytes: attachment.sizeBytes,
+    category: attachment.category,
+    description: attachment.description,
+    uploadedBy: attachment.uploadedBy,
+    createdAt: attachment.createdAt.toISOString(),
+    url: `/api/attachments/${attachment.id}/file`
+  });
+}));
+
+// 3. Delete attachment
+app.delete('/api/attachments/:attachmentId', requireAuth, requireRole('admin', 'doctor', 'recepcionista'), asyncHandler(async (req, res) => {
+  const { attachmentId } = req.params;
+  const attachment = await prisma.clinicalAttachment.findUnique({
+    where: { id: attachmentId }
+  });
+
+  if (!attachment) {
+    return res.status(404).json({ error: 'Archivo no encontrado' });
+  }
+
+  const absolutePath = path.resolve(attachment.filePath);
+  if (fs.existsSync(absolutePath)) {
+    try {
+      fs.unlinkSync(absolutePath);
+    } catch (e) {
+      console.error('Error al eliminar el archivo físico:', e);
+    }
+  }
+
+  await prisma.clinicalAttachment.delete({
+    where: { id: attachmentId }
+  });
+
+  await audit(req, 'delete_attachment', 'clinical_attachment', attachmentId);
+
+  res.status(204).end();
+}));
+
+// 4. View/download attachment file
+app.get('/api/attachments/:attachmentId/file', requireAuth, asyncHandler(async (req, res) => {
+  const { attachmentId } = req.params;
+  const attachment = await prisma.clinicalAttachment.findUnique({
+    where: { id: attachmentId }
+  });
+
+  if (!attachment) {
+    return res.status(404).json({ error: 'Archivo no encontrado' });
+  }
+
+  const absolutePath = path.resolve(attachment.filePath);
+  if (!fs.existsSync(absolutePath)) {
+    return res.status(404).json({ error: 'Archivo físico no encontrado en el servidor' });
+  }
+
+  res.setHeader('Content-Disposition', `inline; filename="${encodeURIComponent(attachment.originalName)}"`);
+  res.sendFile(absolutePath);
 }));
 
 app.use((err: unknown, _req: Request, res: Response, _next: NextFunction) => {

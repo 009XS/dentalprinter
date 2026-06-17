@@ -23,12 +23,30 @@ export interface Patient {
   phone: string;
   allergies?: string;
   riskLevel: RiskLevel;
+  status: 'Activo' | 'Inactivo' | 'Archivado';
   createdAt: string;
   updatedAt: string;
+  medicalHistory?: MedicalHistory;
+  attachments?: ClinicalAttachment[];
 }
+
+export interface MedicalHistory {
+  patientId: string;
+  allergies?: string;
+  medications?: string;
+  diseases?: string;
+  surgeries?: string;
+  observations?: string;
+  officialSections?: string;
+  flexibleSections?: string;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
 
 export interface Appointment {
   id: string;
+  date: string;
   time: string;
   patientId: string;
   patient: Patient;
@@ -145,3 +163,19 @@ export interface ClinicData {
   auditLogs: AuditLog[];
   settings: ClinicSettings;
 }
+
+export interface ClinicalAttachment {
+  id: string;
+  patientId: string;
+  fileName: string;
+  originalName: string;
+  mimeType: string;
+  sizeBytes: number;
+  filePath?: string;
+  category: string;
+  description?: string;
+  uploadedBy?: string;
+  createdAt: string;
+  url?: string;
+}
+
