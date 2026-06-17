@@ -7,172 +7,170 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-model User {
-  id           String   @id
-  name         String
-  email        String   @unique
-  passwordHash String
-  role         String
-  createdAt    DateTime @default(now())
-}
-
-model Patient {
-  id           String        @id
-  name         String
-  avatar       String?
-  initials     String
-  dob          String
-  age          Int
-  phone        String
-  allergies    String?
-  riskLevel    String
-  status       String        @default("Activo")
-  createdAt    DateTime      @default(now())
-  updatedAt    DateTime      @updatedAt
-  appointments Appointment[]
-  budgets      Budget[]
-  odontogram   Odontogram?
-  medicalHistory MedicalHistory?
-  attachments ClinicalAttachment[]
-
-  @@index([name])
-}
-
-model Appointment {
+model Usuario {
   id            String   @id
-  date          String   @default("2026-06-16")
-  time          String
-  patientId     String
-  treatment     String
-  status        String
-  doctor        String
-  startHour     Float
-  durationHours Float
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
-  patient       Patient  @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  nombre        String
+  email         String   @unique
+  claveHash     String
+  rol           String
+  fechaCreacion DateTime @default(now())
+}
 
-  @@index([patientId])
-  @@index([doctor, startHour])
-  @@index([status])
+model Paciente {
+  id                 String             @id
+  nombre             String
+  avatar             String?
+  iniciales          String
+  fechaNacimiento    String
+  edad               Int
+  telefono           String
+  alergias           String?
+  nivelRiesgo        String
+  estado             String             @default("Activo")
+  fechaCreacion      DateTime           @default(now())
+  fechaActualizacion DateTime           @updatedAt
+  citas              Cita[]
+  presupuestos       Presupuesto[]
+  odontograma        Odontograma?
+  historialMedico    HistorialMedico?
+  adjuntos           AdjuntoClinico[]
+
+  @@index([nombre])
+}
+
+model Cita {
+  id                 String   @id
+  fecha              String   @default("2026-06-16")
+  hora               String
+  pacienteId         String
+  tratamiento        String
+  estado             String
+  doctor             String
+  horaInicio         Float
+  duracionHoras      Float
+  fechaCreacion      DateTime @default(now())
+  fechaActualizacion DateTime @updatedAt
+  paciente           Paciente @relation(fields: [pacienteId], references: [id], onDelete: Cascade)
+
+  @@index([pacienteId])
+  @@index([doctor, horaInicio])
+  @@index([estado])
 }
 
 model Chat {
-  id          String   @id
-  patientName String
-  initials    String
-  avatar      String?
-  lastMessage String
-  time        String
-  isNew       Boolean  @default(false)
-  messages    String
-  updatedAt   DateTime @updatedAt
+  id                 String   @id
+  nombrePaciente     String
+  iniciales          String
+  avatar             String?
+  ultimoMensaje      String
+  hora               String
+  esNuevo            Boolean  @default(false)
+  mensajes           String
+  fechaActualizacion DateTime @updatedAt
 }
 
-model Budget {
-  id              String       @id
-  patientId       String
-  status          String
-  discountPercent Float        @default(0)
-  createdAt       DateTime     @default(now())
-  updatedAt       DateTime     @updatedAt
-  patient         Patient      @relation(fields: [patientId], references: [id], onDelete: Cascade)
-  items           BudgetItem[]
+model Presupuesto {
+  id                  String            @id
+  pacienteId          String
+  estado              String
+  porcentajeDescuento Float             @default(0)
+  fechaCreacion       DateTime          @default(now())
+  fechaActualizacion  DateTime          @updatedAt
+  paciente            Paciente          @relation(fields: [pacienteId], references: [id], onDelete: Cascade)
+  items               ItemPresupuesto[]
 
-  @@index([patientId])
-  @@index([status])
+  @@index([pacienteId])
+  @@index([estado])
 }
 
-model BudgetItem {
-  id          String @id
-  budgetId    String
-  code        String
-  description String
-  tooth       String
-  unitPrice   Float
-  total       Float
-  budget      Budget @relation(fields: [budgetId], references: [id], onDelete: Cascade)
+model ItemPresupuesto {
+  id             String      @id
+  presupuestoId  String
+  codigo         String
+  descripcion    String
+  diente         String
+  precioUnitario Float
+  total          Float
+  presupuesto    Presupuesto @relation(fields: [presupuestoId], references: [id], onDelete: Cascade)
 
-  @@index([budgetId])
+  @@index([presupuestoId])
 }
 
-model Odontogram {
-  patientId     String   @id
-  teeth         String
-  interventions String
-  updatedAt     DateTime @updatedAt
-  patient       Patient  @relation(fields: [patientId], references: [id], onDelete: Cascade)
+model Odontograma {
+  pacienteId         String   @id
+  dientes            String
+  intervenciones     String
+  fechaActualizacion DateTime @updatedAt
+  paciente           Paciente @relation(fields: [pacienteId], references: [id], onDelete: Cascade)
 }
 
-model Notification {
-  id        String   @id
-  title     String
-  desc      String
-  time      String
-  read      Boolean  @default(false)
-  createdAt DateTime @default(now())
+model Notificacion {
+  id            String   @id
+  titulo        String
+  descripcion   String
+  tiempo        String
+  leido         Boolean  @default(false)
+  fechaCreacion DateTime @default(now())
 
-  @@index([read])
-  @@index([createdAt])
+  @@index([leido])
+  @@index([fechaCreacion])
 }
 
-model AuditLog {
-  id         String   @id
-  actorId    String
-  actorEmail String
-  action     String
-  entityType String
-  entityId   String?
-  ip         String?
-  createdAt  DateTime @default(now())
+model RegistroAuditoria {
+  id            String   @id
+  actorId       String
+  actorEmail    String
+  accion        String
+  tipoEntidad   String
+  entidadId     String?
+  ip            String?
+  fechaCreacion DateTime @default(now())
 
   @@index([actorId])
-  @@index([entityType])
-  @@index([createdAt])
+  @@index([tipoEntidad])
+  @@index([fechaCreacion])
 }
 
-model ClinicSettings {
+model ConfiguracionClinica {
   id             String   @id @default("singleton")
-  clinicName     String
-  tagline        String
-  notationSystem String
-  whatsAppNumber String
-  complianceMode String
-  updatedAt      DateTime @updatedAt
+  nombreClinica  String
+  eslogan        String
+  sistemaNotacion String
+  numeroWhatsApp String
+  modoCumplimiento String
+  fechaActualizacion DateTime @updatedAt
 }
 
-model MedicalHistory {
-  patientId        String   @id
-  patient          Patient  @relation(fields: [patientId], references: [id], onDelete: Cascade)
+model HistorialMedico {
+  pacienteId         String   @id
+  paciente           Paciente @relation(fields: [pacienteId], references: [id], onDelete: Cascade)
 
-  allergies        String?
-  medications      String?
-  diseases         String?
-  surgeries        String?
-  observations     String?
+  alergias           String?
+  medicamentos       String?
+  enfermedades       String?
+  cirugias           String?
+  observaciones      String?
 
-  officialSections String   @default("{}")
-  flexibleSections String   @default("{}")
+  seccionesOficiales String   @default("{}")
+  seccionesFlexibles String   @default("{}")
 
-  createdAt        DateTime @default(now())
-  updatedAt        DateTime @updatedAt
+  fechaCreacion      DateTime @default(now())
+  fechaActualizacion DateTime @updatedAt
 }
 
-model ClinicalAttachment {
-  id           String   @id @default(cuid())
-  patientId    String
-  patient      Patient  @relation(fields: [patientId], references: [id], onDelete: Cascade)
+model AdjuntoClinico {
+  id            String   @id @default(cuid())
+  pacienteId    String
+  paciente      Paciente @relation(fields: [pacienteId], references: [id], onDelete: Cascade)
 
-  fileName     String
-  originalName String
-  mimeType     String
-  sizeBytes    Int
-  filePath     String
+  nombreArchivo  String
+  nombreOriginal String
+  tipoMime       String
+  tamanoBytes    Int
+  rutaArchivo    String
 
-  category     String   @default("General")
-  description  String?
-  uploadedBy   String?
-  createdAt    DateTime @default(now())
+  categoria     String   @default("General")
+  descripcion   String?
+  subidoPor     String?
+  fechaCreacion DateTime @default(now())
 }
-
-

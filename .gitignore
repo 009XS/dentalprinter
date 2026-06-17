@@ -12,3 +12,4 @@ prisma/*.db-journal
 backup/
 backups-auto/
 uploads/
+scratch/
