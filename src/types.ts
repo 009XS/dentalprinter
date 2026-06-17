@@ -37,7 +37,7 @@ export interface Appointment {
   patient?: Patient;
   treatment: string;
   status: AppointmentStatus;
-  doctor: 'Dr. Pérez' | 'Dra. Gómez' | 'Higiene 1';
+  doctor: string;
   startHour: number; // en horas decimales (ej. 8.75 para las 8:45 AM)
   durationHours: number; // ej. 0.75 para 45 minutos
 }

@@ -120,3 +120,9 @@ body {
 .animate-slide-in-bottom {
   animation: slideInFromBottom 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
+
+/* Estilos para pestañas de archivador físico (clip-path trapezoidal) */
+.folder-tab-clip {
+  clip-path: polygon(12px 0%, calc(100% - 12px) 0%, 100% 100%, 0% 100%);
+}
+

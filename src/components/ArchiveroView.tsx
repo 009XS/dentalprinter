@@ -12,6 +12,7 @@ import {
   FileText, 
   Phone, 
   ShieldAlert, 
+  Droplet, 
   ArrowLeft, 
   AlertCircle, 
   Check, 
@@ -37,7 +38,13 @@ import {
   FileUp,
   Eye,
   Download,
-  Loader2
+  Loader2,
+  Star,
+  Share2,
+  Mail,
+  Microscope,
+  ReceiptText,
+  Contact
 } from 'lucide-react';
 import type { Patient, Appointment, Budget, BudgetItem, MedicalHistory, ClinicalAttachment } from '../types';
 import HistoriaClinicaPrintView from './HistoriaClinicaPrintView';
@@ -69,7 +76,8 @@ export default function ArchiveroView({
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<'Todos' | 'Activo' | 'Inactivo' | 'Archivado' | 'Con Alergias' | 'Con Citas Futuras'>('Todos');
   const [sortBy, setSortBy] = useState<'A-Z' | 'proxima_cita' | 'ultima_cita' | 'fecha_registro' | 'estado'>('estado');
-  const [activeExpedienteTab, setActiveExpedienteTab] = useState<'resumen' | 'citas' | 'odontograma' | 'historia' | 'adjuntos'>('resumen');
+  const [activeExpedienteTab, setActiveExpedienteTab] = useState<'facturas' | 'ficha' | 'historial' | 'laboratorio'>('historial');
+  const [sidebarSort, setSidebarSort] = useState<'A-Z' | 'recent'>('recent');
 
   const formatBytes = (bytes: number) => {
     if (bytes === 0) return '0 Bytes';
@@ -128,12 +136,51 @@ export default function ArchiveroView({
   const [officialSectionsData, setOfficialSectionsData] = useState<any>({});
   const [isDirty, setIsDirty] = useState<boolean>(false);
   const [isPrintMode, setIsPrintMode] = useState<boolean>(false);
+  const [showDetailedHistory, setShowDetailedHistory] = useState<boolean>(false);
+  const [showQuickNoteForm, setShowQuickNoteForm] = useState<boolean>(false);
 
   // Estados de formularios auxiliares para tablas editables
   const [medForm, setMedForm] = useState({ farmaco: '', frecuencia: '', motivo: '' });
   const [diseaseForm, setDiseaseForm] = useState({ diagnostico: '', tiempoEvolucion: '', observaciones: '' });
   const [pathTxForm, setPathTxForm] = useState({ planCosto: '', txRealizado: '', costo: '', aCuenta: '', fecha: '', firma: '' });
   const [noteForm, setNoteForm] = useState({ fecha: new Date().toISOString().split('T')[0], titulo: '', nota: '', doctor: '' });
+
+  const handleSaveQuickNote = () => {
+    if (!noteForm.nota) return;
+    const sec = officialSectionsData.evolucionNotes || { notes: [] };
+    const list = [
+      {
+        id: Math.random().toString(36).substring(2, 9),
+        ...noteForm
+      },
+      ...(sec.notes || [])
+    ];
+    setOfficialSectionsData((prev: any) => ({
+      ...prev,
+      evolucionNotes: {
+        ...(prev.evolucionNotes || {}),
+        notes: list
+      }
+    }));
+    setIsDirty(true);
+    setNoteForm({ fecha: new Date().toISOString().split('T')[0], titulo: '', nota: '', doctor: '' });
+    setShowQuickNoteForm(false);
+    showToast?.('Nota de evolución agregada localmente', 'success');
+  };
+
+  const handleRemoveQuickNote = (id: string) => {
+    const sec = officialSectionsData.evolucionNotes || { notes: [] };
+    const list = (sec.notes || []).filter((n: any) => n.id !== id);
+    setOfficialSectionsData((prev: any) => ({
+      ...prev,
+      evolucionNotes: {
+        ...(prev.evolucionNotes || {}),
+        notes: list
+      }
+    }));
+    setIsDirty(true);
+    showToast?.('Nota eliminada localmente', 'info');
+  };
 
   // Estados para Adjuntos Clínicos (Fase 10)
   const [attachments, setAttachments] = useState<ClinicalAttachment[]>([]);
@@ -667,6 +714,58 @@ export default function ArchiveroView({
     const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
     return sortedPatients.slice(startIndex, startIndex + ITEMS_PER_PAGE);
   }, [sortedPatients, currentPage]);
+
+  const sidebarPatients = useMemo(() => {
+    let list = [...patients];
+    if (searchQuery) {
+      list = list.filter(p =>
+        p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        p.id.toLowerCase().includes(searchQuery.toLowerCase())
+      );
+    }
+    if (sidebarSort === 'A-Z') {
+      list.sort((a, b) => a.name.localeCompare(b.name));
+    } else {
+      list.sort((a, b) => {
+        const dateA = patientCitasMap[a.id]?.proxima?.date || patientCitasMap[a.id]?.ultima?.date || '0000-01-01';
+        const dateB = patientCitasMap[b.id]?.proxima?.date || patientCitasMap[b.id]?.ultima?.date || '0000-01-01';
+        return dateB.localeCompare(dateA);
+      });
+    }
+    return list;
+  }, [patients, searchQuery, sidebarSort, patientCitasMap]);
+
+  const getPatientActivityTime = (patientId: string) => {
+    const times: Record<string, string> = {
+      'PX-88291-LV': '2m ago',
+      'PX-12345-JC': '4h ago',
+      'PX-98765-DL': '2d ago',
+      'PX-54321-EF': '3d ago',
+      'PX-11111-CM': '5d ago',
+      'PX-22222-SJ': '1w ago',
+    };
+    return times[patientId] || '1w ago';
+  };
+
+  const renderStatusDots = (patient: Patient) => {
+    const dots = [];
+    if (patient.status === 'Activo') {
+      dots.push(<span key="status" className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0"></span>);
+    }
+    if (patient.riskLevel === 'Medio Riesgo') {
+      dots.push(<span key="risk" className="w-1.5 h-1.5 rounded-full bg-amber-500 shrink-0"></span>);
+    } else if (patient.riskLevel === 'Alto Riesgo') {
+      dots.push(<span key="risk" className="w-1.5 h-1.5 rounded-full bg-red-500 shrink-0"></span>);
+    }
+    if (patient.allergies) {
+      dots.push(<span key="allergies" className="w-1.5 h-1.5 rounded-full bg-violet-500 shrink-0"></span>);
+    }
+    return (
+      <div className="flex items-center gap-1.5 mt-1">
+        {dots}
+      </div>
+    );
+  };
 
   const fromItem = totalItems === 0 ? 0 : (currentPage - 1) * ITEMS_PER_PAGE + 1;
   const toItem = Math.min(currentPage * ITEMS_PER_PAGE, totalItems);
@@ -2329,6 +2428,453 @@ export default function ArchiveroView({
     );
   };
 
+  const renderDetailedHistoryQuestionnaire = () => {
+    if (!activePatient) return null;
+    if (isPrintMode) {
+      return (
+        <HistoriaClinicaPrintView
+          patient={activePatient}
+          medicalHistory={medicalHistory}
+          onBack={() => setIsPrintMode(false)}
+        />
+      );
+    }
+
+    return (
+      <div className="space-y-6">
+        {/* Header y estado de actualización */}
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 border-b border-slate-100 dark:border-slate-800/80 pb-3">
+          <div>
+            <h4 className="font-sans font-bold text-sm text-[#181c1e] dark:text-white">Historia Clínica Oficial</h4>
+            <p className="text-3xs text-[#444748] dark:text-slate-400 mt-0.5">
+              Formulario oficial de 11 secciones para el expediente clínico.
+            </p>
+          </div>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => setIsPrintMode(true)}
+              className="px-3 py-1.5 bg-slate-100 dark:bg-slate-855 hover:bg-slate-205 dark:hover:bg-slate-800 text-slate-750 dark:text-slate-355 font-sans text-3xs font-bold uppercase tracking-wider rounded-lg flex items-center gap-1.5 cursor-pointer transition-colors no-print border border-slate-205 dark:border-slate-800"
+            >
+              <Printer className="w-3.5 h-3.5" />
+              Vista de Impresión
+            </button>
+            <div className="text-[10px] bg-slate-100 dark:bg-slate-800 px-2.5 py-1 rounded-lg font-medium text-slate-500 dark:text-slate-400">
+              Última actualización: <span className="font-mono font-bold">{formatLastUpdated(medicalHistory?.updatedAt)}</span>
+            </div>
+          </div>
+        </div>
+
+        {loadingHistory ? (
+          <div className="py-12 text-center text-slate-450 dark:text-slate-500 space-y-2">
+            <svg className="animate-spin h-6.5 w-6.5 mx-auto text-blue-600 dark:text-blue-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+            </svg>
+            <p className="font-sans text-xs">Cargando expediente médico...</p>
+          </div>
+        ) : (
+          <div className="flex flex-col lg:flex-row gap-6">
+            {/* Sidebar Interno */}
+            <div className="w-full lg:w-64 shrink-0 flex flex-row lg:flex-col overflow-x-auto lg:overflow-x-visible border-b lg:border-b-0 lg:border-r border-slate-205 dark:border-slate-800 pb-4 lg:pb-0 lg:pr-6 gap-2">
+              {[
+                { id: 1, label: '1. Datos y Signos' },
+                { id: 2, label: '2. Salud Sistémica' },
+                { id: 3, label: '3. Ant. Familiares' },
+                { id: 4, label: '4. Ant. Personales' },
+                { id: 5, label: '5. Interrogatorio' },
+                { id: 6, label: '6. Exploración Física' },
+                { id: 7, label: '7. Exp. Intrabucal & IHOS' },
+                { id: 8, label: '8. Odontograma' },
+                { id: 9, label: '9. Consentimiento' },
+                { id: 10, label: '10. Diagnóstico y Plan' },
+                { id: 11, label: '11. Notas de Evolución' }
+              ].map(sec => {
+                const isTabActive = activeSectionTab === sec.id;
+                const isSecCompleted = (() => {
+                  if (!officialSectionsData) return false;
+                  switch (sec.id) {
+                    case 1:
+                      const pd = officialSectionsData.patientData || {};
+                      return !!(pd.sexo || pd.lugarNacimiento || pd.peso || pd.altura);
+                    case 2:
+                      const ss = officialSectionsData.systemicHealth || {};
+                      return !!((ss.medications && ss.medications.length > 0) || (ss.systemicDiseases && ss.systemicDiseases.length > 0) || ss.motivoConsulta);
+                    case 3:
+                      const fh = officialSectionsData.familyHistory || {};
+                      return !!(fh.alergiasDetalle || fh.infectocontagiosasDetalle || (fh.matrix && Object.keys(fh.matrix).some(k => Object.values(fh.matrix[k] || {}).some(v => v === true))));
+                    case 4:
+                      const ph = officialSectionsData.personalHistory || {};
+                      return !!(ph.vivienda || ph.habitosHigienicos || ph.menarca || (ph.pathologicalTable && ph.pathologicalTable.length > 0));
+                    case 5:
+                      const ir = officialSectionsData.systemsReview || {};
+                      return !!(ir.symptoms && Object.keys(ir.symptoms).some(k => ir.symptoms[k]?.presenta === true));
+                    case 6:
+                      const pe = officialSectionsData.physicalExam || {};
+                      return !!(pe.actitudPaciente || pe.atmExploracion);
+                    case 7:
+                      const ie = officialSectionsData.intrabucalExam || {};
+                      return !!(ie.ihos?.cita1?.fecha || (ie.tejidosBlandos && Object.values(ie.tejidosBlandos).some(v => v !== '')));
+                    case 8:
+                      return true;
+                    case 9:
+                      return !!officialSectionsData.consentimiento?.acepto;
+                    case 10:
+                      const dp = officialSectionsData.diagnosticoPlan || {};
+                      return !!(dp.diagnosticoIntegral || (dp.planTxList && dp.planTxList.length > 0));
+                    case 11:
+                      const en = officialSectionsData.evolucionNotes || {};
+                      return !!(en.notes && en.notes.length > 0);
+                    default:
+                      return false;
+                  }
+                })();
+
+                return (
+                  <button
+                    key={sec.id}
+                    type="button"
+                    onClick={() => setActiveSectionTab(sec.id)}
+                    className={`px-3 py-2 rounded-xl text-3xs font-bold text-left transition-all cursor-pointer whitespace-nowrap lg:whitespace-normal flex items-center justify-between gap-2 shrink-0 lg:w-full ${
+                      isTabActive
+                        ? 'bg-blue-50 text-blue-700 dark:bg-blue-950/30 dark:text-blue-450 border-l-2 border-blue-600'
+                        : 'text-slate-650 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800'
+                    }`}
+                  >
+                    <span>{sec.label}</span>
+                    {isSecCompleted && (
+                      <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full shrink-0" title="Sección completada" />
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* Contenido de la Sección */}
+            <div className="flex-1 space-y-6">
+              
+              {/* Barra de Progreso y Guardar Sección */}
+              <div className="bg-slate-50 dark:bg-slate-800/35 p-3 rounded-2xl border border-slate-205 dark:border-slate-800 flex flex-col sm:flex-row justify-between items-center gap-3">
+                <div className="flex items-center gap-3 w-full sm:w-auto">
+                  <div className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+                    Progreso General:
+                  </div>
+                  <div className="flex-1 sm:w-32 bg-slate-200 dark:bg-slate-700 h-2 rounded-full overflow-hidden">
+                    <div 
+                      className="bg-emerald-500 h-full transition-all duration-355"
+                      style={{ width: `${(calculateProgress.completed / calculateProgress.total) * 100}%` }}
+                    />
+                  </div>
+                  <div className="text-2xs font-bold text-slate-750 dark:text-slate-355 font-mono">
+                    {calculateProgress.completed} de {calculateProgress.total}
+                  </div>
+                </div>
+                
+                <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
+                  {isDirty && (
+                    <span className="text-[10px] text-amber-605 dark:text-amber-400 font-bold flex items-center gap-1 mr-2 animate-pulse">
+                      <AlertCircle className="w-3.5 h-3.5" /> Cambios sin guardar
+                    </span>
+                  )}
+                  {activeSectionTab !== 8 && (
+                    <button
+                      type="button"
+                      disabled={savingHistory}
+                      onClick={handleSaveActiveSection}
+                      className="px-3.5 py-1.5 bg-blue-600 hover:bg-blue-700 text-white font-sans text-3xs font-bold uppercase tracking-wider rounded-lg shadow-sm flex items-center gap-1.5 cursor-pointer disabled:opacity-50 transition-colors"
+                    >
+                      <Save className="w-3.5 h-3.5" />
+                      Guardar Sección
+                    </button>
+                  )}
+                  <button
+                    type="button"
+                    disabled={savingHistory}
+                    onClick={handleSaveAllOfficial}
+                    className="px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-sans text-3xs font-bold uppercase tracking-wider rounded-lg shadow-sm flex items-center gap-1.5 cursor-pointer disabled:opacity-50 transition-colors"
+                  >
+                    <CheckCircle2 className="w-3.5 h-3.5" />
+                    Guardar Todo
+                  </button>
+                </div>
+              </div>
+
+              {/* Secciones de formulario */}
+              {activeSectionTab === 1 && renderSection1()}
+              {activeSectionTab === 2 && renderSection2()}
+              {activeSectionTab === 3 && renderSection3()}
+              {activeSectionTab === 4 && renderSection4()}
+              {activeSectionTab === 5 && renderSection5()}
+              {activeSectionTab === 6 && renderSection6()}
+              {activeSectionTab === 7 && renderSection7()}
+              {activeSectionTab === 8 && renderSection8()}
+              {activeSectionTab === 9 && renderSection9()}
+              {activeSectionTab === 10 && renderSection10()}
+              {activeSectionTab === 11 && renderSection11()}
+
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  const renderAttachmentsSection = () => {
+    return (
+      <div className="space-y-6">
+        <div className="border-b border-slate-100 dark:border-slate-800/80 pb-3 flex justify-between items-center">
+          <div>
+            <h4 className="font-sans font-bold text-sm text-[#181c1e] dark:text-white">Adjuntos Clínicos</h4>
+            <p className="text-3xs text-[#444748] dark:text-slate-400 mt-0.5 font-medium">Radiografías, documentos y archivos del expediente</p>
+          </div>
+          <div className="px-2.5 py-1 bg-slate-100 dark:bg-slate-800 rounded-lg text-3xs font-bold text-slate-650 dark:text-slate-350">
+            {attachments.length} {attachments.length === 1 ? 'archivo' : 'archivos'}
+          </div>
+        </div>
+
+        {/* Formulario de Subida */}
+        <form onSubmit={handleUploadAttachment} className="bg-slate-50 dark:bg-slate-800/30 border border-slate-205 dark:border-slate-800/80 rounded-2xl p-5 space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {/* Selector de Archivo */}
+            <div className="space-y-1.5">
+              <label className="block text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+                Seleccionar Archivo (Máx 10 MB)
+              </label>
+              <div className="relative border border-dashed border-slate-300 dark:border-slate-700 hover:border-blue-500 dark:hover:border-blue-500 rounded-xl p-2.5 transition-colors flex items-center justify-center bg-white dark:bg-slate-900 cursor-pointer">
+                <input
+                  type="file"
+                  id="clinical-file-input"
+                  accept="image/jpeg,image/png,image/webp,application/pdf"
+                  onChange={(e) => {
+                    const selected = e.target.files?.[0] || null;
+                    setAttachmentFile(selected);
+                  }}
+                  className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                />
+                <div className="flex items-center gap-2">
+                  <FileUp className="w-4.5 h-4.5 text-slate-405 dark:text-slate-555" />
+                  <span className="text-3xs font-bold text-slate-600 dark:text-slate-355 truncate max-w-[180px]">
+                    {attachmentFile ? attachmentFile.name : 'Elegir archivo JPG, PNG, WEBP, PDF'}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {/* Selector de Categoría */}
+            <div className="space-y-1.5">
+              <label className="block text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+                Categoría
+              </label>
+              <select
+                value={attachmentCategory}
+                onChange={(e) => setAttachmentCategory(e.target.value)}
+                className="w-full bg-white dark:bg-slate-900 border border-slate-250 dark:border-slate-800 rounded-xl px-3 py-2 text-2xs text-[#181c1e] dark:text-white focus:outline-none focus:ring-1 focus:ring-blue-500 font-bold"
+              >
+                <option value="Radiografía">Radiografía</option>
+                <option value="Fotografía clínica">Fotografía clínica</option>
+                <option value="PDF / Documento">PDF / Documento</option>
+                <option value="Consentimiento">Consentimiento</option>
+                <option value="Receta">Receta</option>
+                <option value="Laboratorio">Laboratorio</option>
+                <option value="General">General</option>
+              </select>
+            </div>
+
+            {/* Descripción */}
+            <div className="space-y-1.5">
+              <label className="block text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+                Descripción / Notas
+              </label>
+              <input
+                type="text"
+                placeholder="Ej. Radiografía panorámica inicial"
+                value={attachmentDescription}
+                onChange={(e) => setAttachmentDescription(e.target.value)}
+                className="w-full bg-white dark:bg-slate-900 border border-slate-250 dark:border-slate-800 rounded-xl px-3 py-2 text-2xs text-[#181c1e] dark:text-white focus:outline-none focus:ring-1 focus:ring-blue-500 font-medium"
+              />
+            </div>
+          </div>
+
+          <div className="flex justify-end pt-1">
+            <button
+              type="submit"
+              disabled={uploadingAttachment || !attachmentFile}
+              className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-3xs font-bold uppercase tracking-wider rounded-xl shadow-xs flex items-center gap-1.5 disabled:opacity-50 cursor-pointer transition-colors"
+            >
+              {uploadingAttachment ? (
+                <>
+                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                  Subiendo...
+                </>
+              ) : (
+                <>
+                  <Upload className="w-3.5 h-3.5" />
+                  Subir archivo
+                </>
+              )}
+            </button>
+          </div>
+        </form>
+
+        {/* Listado de Adjuntos */}
+        {loadingAttachments ? (
+          <div className="flex flex-col items-center justify-center py-10 space-y-2">
+            <Loader2 className="w-6 h-6 animate-spin text-blue-500" />
+            <span className="text-3xs text-slate-400 font-bold uppercase">Cargando adjuntos...</span>
+          </div>
+        ) : attachments.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-12 px-4 border border-dashed border-slate-200 dark:border-slate-800 rounded-2xl bg-slate-25/10">
+            <Paperclip className="w-8 h-8 text-slate-350 dark:text-slate-650 mb-2" />
+            <p className="text-xs font-bold text-slate-500 dark:text-slate-400">Este paciente aún no tiene adjuntos clínicos.</p>
+            <p className="text-3xs text-slate-405 dark:text-slate-500 mt-1">Sube radiografías, recetas o estudios clínicos en la parte superior.</p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            {attachments.map((att) => {
+              const isPdf = att.mimeType === 'application/pdf';
+              const isImage = att.mimeType.startsWith('image/');
+              const fileSizeFormatted = formatBytes(att.sizeBytes);
+              const uploadDate = new Date(att.createdAt).toLocaleDateString([], {
+                day: 'numeric',
+                month: 'short',
+                year: 'numeric'
+              });
+
+              return (
+                <div key={att.id} className="border border-slate-200 dark:border-slate-800/80 rounded-2xl p-4 bg-white dark:bg-slate-900/60 shadow-3xs flex flex-col justify-between hover:shadow-2xs transition-shadow">
+                  <div className="space-y-2.5">
+                    {/* Encabezado Tarjeta */}
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="p-2 bg-slate-50 dark:bg-slate-855 rounded-xl">
+                        {isImage && <Activity className="w-5 h-5 text-indigo-505 dark:text-indigo-455" />}
+                        {isPdf && <FileText className="w-5 h-5 text-red-500 dark:text-red-455" />}
+                        {!isImage && !isPdf && <Paperclip className="w-5 h-5 text-slate-400" />}
+                      </div>
+                      <span className="text-[9px] font-bold uppercase px-2 py-0.5 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-355 rounded-lg">
+                        {att.category}
+                      </span>
+                    </div>
+
+                    {/* Detalles */}
+                    <div>
+                      <h5 className="text-2xs font-bold text-slate-750 dark:text-slate-200 truncate" title={att.originalName}>
+                        {att.originalName}
+                      </h5>
+                      <p className="text-3xs text-slate-400 mt-0.5">
+                        Subido el {uploadDate} • {fileSizeFormatted}
+                      </p>
+                      {att.description && (
+                        <p className="text-3xs text-slate-600 dark:text-slate-455 bg-slate-50 dark:bg-slate-855 p-2 rounded-lg mt-2 font-medium">
+                          {att.description}
+                        </p>
+                      )}
+                      {att.uploadedBy && (
+                        <p className="text-[8px] font-bold text-slate-450 dark:text-slate-550 uppercase tracking-wider mt-1.5">
+                          Por: {att.uploadedBy}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Acciones */}
+                  <div className="flex items-center justify-end gap-2 border-t border-slate-100 dark:border-slate-855 pt-3 mt-4">
+                    {isImage && (
+                      <button
+                        type="button"
+                        onClick={async () => {
+                          try {
+                            const token = getToken();
+                            const headers = new Headers();
+                            if (token) headers.set('Authorization', `Bearer ${token}`);
+                            const res = await fetch(att.url!, { headers });
+                            if (!res.ok) throw new Error('No se pudo cargar la vista previa');
+                            const blob = await res.blob();
+                            if (previewImage) {
+                              URL.revokeObjectURL(previewImage);
+                            }
+                            const objectUrl = URL.createObjectURL(blob);
+                            setPreviewImage(objectUrl);
+                            setPreviewTitle(att.originalName);
+                          } catch (err: any) {
+                            if (showToast) showToast('Error al cargar la imagen', 'error');
+                          }
+                        }}
+                        className="px-2.5 py-1.5 text-3xs font-bold text-slate-655 hover:text-slate-800 dark:text-slate-400 dark:hover:text-white flex items-center gap-1 hover:bg-slate-50 dark:hover:bg-slate-800 rounded-lg cursor-pointer transition-colors"
+                      >
+                        <Eye className="w-3.5 h-3.5" />
+                        Ver
+                      </button>
+                    )}
+                    {isPdf && (
+                      <button
+                        type="button"
+                        onClick={async () => {
+                          try {
+                            const token = getToken();
+                            const headers = new Headers();
+                            if (token) headers.set('Authorization', `Bearer ${token}`);
+                            const res = await fetch(att.url!, { headers });
+                            if (!res.ok) throw new Error('No se pudo abrir el PDF');
+                            const blob = await res.blob();
+                            const objectUrl = URL.createObjectURL(blob);
+                            window.open(objectUrl, '_blank');
+                            setTimeout(() => URL.revokeObjectURL(objectUrl), 10000);
+                          } catch (err: any) {
+                            if (showToast) showToast('Error al abrir el PDF', 'error');
+                          }
+                        }}
+                        className="px-2.5 py-1.5 text-3xs font-bold text-slate-655 hover:text-slate-800 dark:text-slate-400 dark:hover:text-white flex items-center gap-1 hover:bg-slate-50 dark:hover:bg-slate-800 rounded-lg cursor-pointer transition-colors"
+                      >
+                        <Eye className="w-3.5 h-3.5" />
+                        Abrir PDF
+                      </button>
+                    )}
+                    {!isImage && !isPdf && (
+                      <button
+                        type="button"
+                        onClick={async () => {
+                          try {
+                            const token = getToken();
+                            const headers = new Headers();
+                            if (token) headers.set('Authorization', `Bearer ${token}`);
+                            const res = await fetch(att.url!, { headers });
+                            if (!res.ok) throw new Error('No se pudo descargar el archivo');
+                            const blob = await res.blob();
+                            const objectUrl = URL.createObjectURL(blob);
+                            const a = document.createElement('a');
+                            a.href = objectUrl;
+                            a.download = att.originalName;
+                            document.body.appendChild(a);
+                            a.click();
+                            a.remove();
+                            URL.revokeObjectURL(objectUrl);
+                          } catch (err: any) {
+                            if (showToast) showToast('Error al descargar el archivo', 'error');
+                          }
+                        }}
+                        className="px-2.5 py-1.5 text-3xs font-bold text-slate-655 hover:text-slate-800 dark:text-slate-400 dark:hover:text-white flex items-center gap-1 hover:bg-slate-50 dark:hover:bg-slate-800 rounded-lg cursor-pointer transition-colors"
+                      >
+                        <Download className="w-3.5 h-3.5" />
+                        Descargar
+                      </button>
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => handleDeleteAttachment(att.id)}
+                      className="px-2.5 py-1.5 text-3xs font-bold text-red-505 hover:text-red-750 hover:bg-red-55 dark:hover:bg-red-950/20 rounded-lg cursor-pointer transition-colors"
+                    >
+                      Eliminar
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+    );
+  };
+
   return (
     <div id="archivero-view-root" className="p-6 overflow-y-auto space-y-6">
       
@@ -2672,11 +3218,8 @@ export default function ArchiveroView({
                   <ChevronsRight className="w-3.5 h-3.5" />
                 </button>
               </div>
-
             </div>
-
           </div>
-
         </div>
       ) : (
         
@@ -2684,7 +3227,7 @@ export default function ArchiveroView({
         <div className="space-y-6 animate-in fade-in duration-200">
           
           {/* Botón de Regresar al Archivero */}
-          <div>
+          <div className="no-print">
             <button 
               onClick={() => setSelectedPatientId('')}
               className="flex items-center gap-1 text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 font-sans font-bold text-xs uppercase tracking-wider cursor-pointer hover:underline"
@@ -2693,709 +3236,410 @@ export default function ArchiveroView({
             </button>
           </div>
 
-          {/* Encabezado y Datos Clínicos */}
+          {/* Diseño de Panel Dividido (Carpeta a la izquierda, Cajoneras de Archivo a la derecha) */}
           <div className="flex flex-col lg:flex-row gap-6 items-stretch">
             
-            {/* Panel Izquierdo: Resumen del Paciente */}
-            <div className="lg:w-1/3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 shadow-3xs space-y-4">
-              <div className="flex items-center gap-4 border-b border-slate-100 dark:border-slate-800 pb-4">
-                <div className="w-14 h-14 rounded-full bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300 flex items-center justify-center font-bold text-lg border border-blue-200 shadow-inner">
-                  {activePatient.initials}
-                </div>
-                <div>
-                  <h3 className="font-sans font-bold text-lg text-slate-900 dark:text-white leading-tight">
-                    {activePatient.name}
-                  </h3>
-                  <span className="font-mono text-2xs bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 px-1.5 py-0.5 rounded block mt-1 w-max">
-                    {activePatient.id}
-                  </span>
-                </div>
-              </div>
-
-              {/* Detalles */}
-              <div className="space-y-3 text-xs font-sans">
-                <div className="grid grid-cols-2 gap-2">
-                  <div>
-                    <span className="text-[9px] uppercase font-bold text-slate-400 block">Edad</span>
-                    <span className="font-semibold text-slate-800 dark:text-slate-200">{activePatient.age} años</span>
-                  </div>
-                  <div>
-                    <span className="text-[9px] uppercase font-bold text-slate-400 block">F. Nacimiento</span>
-                    <span className="font-semibold text-slate-800 dark:text-slate-200">{activePatient.dob}</span>
-                  </div>
-                </div>
-
-                <div>
-                  <span className="text-[9px] uppercase font-bold text-slate-400 block">Teléfono / Celular</span>
-                  <span className="font-mono font-semibold text-slate-800 dark:text-slate-200">{activePatient.phone}</span>
-                </div>
-
-                <div>
-                  <span className="text-[9px] uppercase font-bold text-slate-400 block">Nivel de Riesgo</span>
-                  <span className={`inline-block px-2 py-0.5 rounded-full text-[9px] font-bold uppercase mt-1 ${getRiskColor(activePatient.riskLevel)}`}>
-                    {activePatient.riskLevel}
-                  </span>
-                </div>
-
-                <div>
-                  <span className="text-[9px] uppercase font-bold text-slate-400 block">Alergias</span>
-                  {activePatient.allergies ? (
-                    <span className="inline-flex items-center gap-1 text-red-500 font-bold mt-1">
-                      <ShieldAlert className="w-3.5 h-3.5 shrink-0" />
-                      {activePatient.allergies}
-                    </span>
-                  ) : (
-                    <span className="text-slate-400 font-medium block mt-1">Ninguna alergia reportada</span>
-                  )}
-                </div>
-
-                <div>
-                  <span className="text-[9px] uppercase font-bold text-slate-400 block">Estado Operativo</span>
-                  <span className={`inline-block px-2 py-0.5 rounded text-[9px] font-bold uppercase mt-1 ${getStatusColor(activePatient.status)}`}>
-                    {activePatient.status}
-                  </span>
-                </div>
-              </div>
-            </div>
-
-            {/* Panel Derecho: Secciones y Pestañas */}
-            <div className="flex-1 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-3xs overflow-hidden flex flex-col">
+            {/* Panel Principal (Izquierda): Carpeta del Expediente */}
+            <div className="flex-1 flex flex-col min-w-0">
               
-              {/* Barra de Pestañas del Expediente */}
-              <div className="bg-slate-50 dark:bg-slate-900/50 border-b border-slate-250/50 dark:border-slate-800 px-4 py-2 flex flex-wrap gap-1.5">
+              {/* Pestañas de archivador físico (slanted tabs) - Grupos de Letras */}
+              <div className="flex flex-wrap items-end pl-2 sm:pl-4 -mb-[1px] relative z-10 select-none overflow-x-auto sm:overflow-x-visible no-print">
                 {[
-                  { id: 'resumen', label: 'Resumen & Citas', icon: Calendar },
-                  { id: 'odontograma', label: 'Odontograma & Presupuestos', icon: Activity },
-                  { id: 'historia', label: 'Historia Clínica', icon: FileHeart },
-                  { id: 'adjuntos', label: 'Adjuntos', icon: Paperclip }
-                ].map(tab => {
-                  const Icon = tab.icon;
-                  const isActive = activeExpedienteTab === tab.id;
+                  { label: 'A – E', start: 'A', end: 'E' },
+                  { label: 'F – J', start: 'F', end: 'J' },
+                  { label: 'K – O', start: 'K', end: 'O' },
+                  { label: 'P – T', start: 'P', end: 'T' },
+                  { label: 'U – Z', start: 'U', end: 'Z' }
+                ].map((group, idx) => {
+                  const groupPatients = patients.filter(p => {
+                    const initial = getSortableChar(p.name);
+                    return initial >= group.start && initial <= group.end;
+                  });
+                  const hasPatients = groupPatients.length > 0;
+                  const activeLetter = getSortableChar(activePatient.name);
+                  const isActive = activeLetter >= group.start && activeLetter <= group.end;
+                  
+                  // Theme styles mapping
+                  let parentBg = 'bg-slate-200 dark:bg-slate-800/80';
+                  let innerBg = 'bg-slate-100/35 dark:bg-slate-850/20 text-slate-400 dark:text-slate-650 cursor-not-allowed opacity-30';
+                  
+                  if (isActive) {
+                    parentBg = 'bg-slate-350 dark:bg-slate-700';
+                    innerBg = 'bg-white dark:bg-slate-900 text-blue-600 dark:text-blue-400 font-extrabold cursor-pointer';
+                  } else if (hasPatients) {
+                    parentBg = 'bg-blue-150 dark:bg-blue-950/40';
+                    innerBg = 'bg-blue-50/60 dark:bg-blue-900/15 text-blue-700 dark:text-blue-300 font-bold hover:bg-blue-100/80 dark:hover:bg-blue-900/30 cursor-pointer';
+                  }
+                  
                   return (
                     <button
-                      key={tab.id}
-                      onClick={() => setActiveExpedienteTab(tab.id as any)}
-                      className={`px-3.5 py-2 rounded-xl text-2xs font-bold transition-all cursor-pointer flex items-center gap-1.5 whitespace-nowrap ${
-                        isActive
-                          ? 'bg-blue-600 text-white dark:bg-blue-500 shadow-3xs'
-                          : 'text-[#444748] dark:text-slate-350 hover:bg-slate-100 dark:hover:bg-slate-800'
-                      }`}
+                      key={group.label}
+                      disabled={!hasPatients}
+                      onClick={() => {
+                        if (!hasPatients) return;
+                        // Cycle to next patient in this group if already active on this group
+                        if (isActive && groupPatients.length > 1) {
+                          const currentIndex = groupPatients.findIndex(p => p.id === activePatient.id);
+                          const nextIndex = (currentIndex + 1) % groupPatients.length;
+                          setSelectedPatientId(groupPatients[nextIndex].id);
+                        } else {
+                          setSelectedPatientId(groupPatients[0].id);
+                        }
+                      }}
+                      className="group relative pb-[1px] focus:outline-none shrink-0"
+                      style={{ 
+                        minWidth: '100px',
+                        smMinWidth: '130px',
+                        zIndex: isActive ? 20 : 10 - idx,
+                        marginRight: '-8px'
+                      }}
+                      title={hasPatients ? `${groupPatients.length} paciente(s) en la sección ${group.label}` : `Sin pacientes en la sección ${group.label}`}
                     >
-                      <Icon className="w-3.5 h-3.5" />
-                      {tab.label}
+                      {/* Parent border emulator */}
+                      <div className={`p-[1px] folder-tab-clip ${parentBg} transition-all duration-150`}>
+                        {/* Inner tab */}
+                        <div className={`px-4 py-2 folder-tab-clip ${innerBg} transition-all duration-150 flex items-center justify-center text-xs font-bold`}>
+                          {group.label}
+                        </div>
+                      </div>
                     </button>
                   );
                 })}
               </div>
 
-              {/* Contenido de la pestaña activa */}
-              <div className="p-6 flex-1 overflow-y-auto min-h-[300px]">
+              {/* Cuerpo de la Carpeta (Contenido Principal) */}
+              <div className="bg-white dark:bg-slate-900 border border-slate-250/70 dark:border-slate-800 rounded-b-2xl rounded-tr-2xl sm:rounded-tl-none shadow-3xs p-6 flex-1 flex flex-col space-y-6">
                 
-                {/* PESTAÑA A: RESUMEN Y CITAS */}
-                {activeExpedienteTab === 'resumen' && (
-                  <div className="space-y-6">
-                    <div className="border-b border-slate-100 dark:border-slate-800/80 pb-3">
-                      <h4 className="font-sans font-bold text-sm text-[#181c1e] dark:text-white">Historial y Programación de Citas</h4>
-                      <p className="text-3xs text-[#444748] dark:text-slate-400 mt-0.5">Todas las citas registradas e historial del paciente.</p>
-                    </div>
-
-                    <div className="space-y-4">
-                      {activePatientAppointments.length === 0 ? (
-                        <p className="py-6 text-center text-xs text-slate-400">Este paciente aún no tiene citas registradas.</p>
+                {/* Cabecera del Paciente (Dentro de la carpeta) */}
+                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 pb-5 border-b border-slate-100 dark:border-slate-800/80">
+                  <div className="flex items-center gap-4">
+                    {/* Avatar */}
+                    <div className="relative shrink-0">
+                      {activePatient.avatar ? (
+                        <img 
+                          src={activePatient.avatar} 
+                          alt={activePatient.name} 
+                          className="w-14 h-14 rounded-2xl object-cover border-2 border-slate-100 dark:border-slate-800"
+                        />
                       ) : (
-                        <div className="space-y-3">
-                          {activePatientAppointments.map(appt => {
-                            let badgeClass = 'bg-blue-50 text-blue-700 dark:bg-blue-950/20 dark:text-blue-400';
-                            if (appt.status === 'Cancelada') {
-                              badgeClass = 'bg-slate-105 text-slate-700 dark:bg-slate-800 dark:text-slate-450';
-                            } else if (appt.status === 'En Espera') {
-                              badgeClass = 'bg-emerald-50 text-emerald-750 dark:bg-emerald-950/20 dark:text-emerald-400';
-                            } else if (appt.status === 'Atrasada') {
-                              badgeClass = 'bg-red-50 text-red-700 dark:bg-red-950/20 dark:text-red-400';
-                            } else if (appt.status === 'Pendiente') {
-                              badgeClass = 'bg-amber-50 text-amber-805 dark:bg-amber-950/20 dark:text-amber-400';
-                            }
-
-                            return (
-                              <div 
-                                key={appt.id}
-                                className="p-4 bg-slate-50/50 dark:bg-slate-800/20 rounded-xl border border-slate-200/50 dark:border-slate-800/60 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 text-xs"
-                              >
-                                <div className="space-y-1">
-                                  <div className="flex items-center gap-1.5 font-bold text-slate-800 dark:text-white">
-                                    <Calendar className="w-3.5 h-3.5 text-blue-500" />
-                                    <span>{appt.date}</span>
-                                    <span className="text-slate-350 dark:text-slate-700">|</span>
-                                    <Clock className="w-3.5 h-3.5 text-blue-500" />
-                                    <span>{appt.time}</span>
-                                  </div>
-                                  <p className="text-[11px] text-slate-500 dark:text-slate-405 font-medium">
-                                    Tratamiento: <strong className="text-slate-700 dark:text-slate-300">{appt.treatment}</strong> · Médico: <strong>{appt.doctor}</strong>
-                                  </p>
-                                </div>
-                                <div className="flex items-center gap-2">
-                                  <span className="text-3xs text-slate-450 font-medium">
-                                    Duración: {appt.durationHours * 60} mins
-                                  </span>
-                                  <span className={`px-2 py-0.5 rounded text-[8px] font-bold uppercase tracking-wider ${badgeClass}`}>
-                                    {appt.status}
-                                  </span>
-                                </div>
-                              </div>
-                            );
-                          })}
+                        <div className="w-14 h-14 rounded-2xl bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300 flex items-center justify-center font-bold text-lg border border-blue-200">
+                          {activePatient.initials}
                         </div>
                       )}
-                    </div>
-                  </div>
-                )}
-
-                {/* PESTAÑA B: ODONTOGRAMA Y PRESUPUESTOS */}
-                {activeExpedienteTab === 'odontograma' && (
-                  <div className="space-y-6">
-                    <div className="border-b border-slate-100 dark:border-slate-800/80 pb-3">
-                      <h4 className="font-sans font-bold text-sm text-[#181c1e] dark:text-white">Odontograma y Presupuestos Relacionados</h4>
-                      <p className="text-3xs text-[#444748] dark:text-slate-400 mt-0.5">Accede a la carta dental interactiva y presupuestos aprobados o pendientes del paciente.</p>
-                    </div>
-
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                      
-                      {/* Acceso Odontograma */}
-                      <div className="p-4 bg-slate-50/50 dark:bg-slate-800/25 border border-slate-200/50 dark:border-slate-800/70 rounded-2xl flex flex-col justify-between h-40">
-                        <div className="space-y-1">
-                          <Activity className="w-6 h-6 text-blue-600 dark:text-blue-400" />
-                          <h5 className="font-bold text-xs text-slate-800 dark:text-white pt-1">Ficha de Odontograma</h5>
-                          <p className="text-[10px] text-slate-500 dark:text-slate-405 leading-relaxed">
-                            Visualiza e interactúa con el mapa dental en 2D, registra caries, implantes, coronas o extracciones.
-                          </p>
-                        </div>
-                        <button
-                          onClick={() => {
-                            setSelectedPatientId(activePatient.id);
-                            setCurrentTab('odontogram');
-                          }}
-                          className="w-full py-1.5 bg-blue-600 hover:bg-blue-700 text-white font-sans text-[10px] font-bold uppercase tracking-wider rounded-lg cursor-pointer transition-colors text-center"
-                        >
-                          Abrir Odontograma
-                        </button>
-                      </div>
-
-                      {/* Acceso Presupuestos */}
-                      <div className="p-4 bg-slate-50/50 dark:bg-slate-800/25 border border-slate-200/50 dark:border-slate-800/70 rounded-2xl flex flex-col justify-between h-40">
-                        <div className="space-y-1">
-                          <FileText className="w-6 h-6 text-emerald-600 dark:text-emerald-450" />
-                          <h5 className="font-bold text-xs text-slate-800 dark:text-white pt-1">Presupuestos Dentales</h5>
-                          <p className="text-[10px] text-slate-500 dark:text-slate-405 leading-relaxed">
-                            Consulta o redacta planes de tratamiento clínicos y estimaciones de costos aprobadas.
-                          </p>
-                        </div>
-                        <button
-                          onClick={() => {
-                            setSelectedPatientId(activePatient.id);
-                            setCurrentTab('presupuestos');
-                          }}
-                          className="w-full py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-sans text-[10px] font-bold uppercase tracking-wider rounded-lg cursor-pointer transition-colors text-center"
-                        >
-                          Ver Presupuestos
-                        </button>
-                      </div>
-
-                    </div>
-
-                    {/* Presupuestos del Paciente */}
-                    <div className="space-y-3 pt-3">
-                      <h5 className="font-bold text-xs text-slate-800 dark:text-white flex items-center gap-1.5">
-                        <FileText className="w-4 h-4 text-slate-400" /> Presupuestos Clínicos Recientes
-                      </h5>
-                      
-                      {activePatientBudgets.length === 0 ? (
-                        <p className="text-2xs text-slate-450 font-medium py-2">No se encontraron presupuestos emitidos para este paciente.</p>
-                      ) : (
-                        <div className="space-y-2.5">
-                          {activePatientBudgets.map(b => (
-                            <div 
-                              key={b.id}
-                              className="p-3 bg-white dark:bg-slate-900 border border-slate-205 dark:border-slate-800/80 rounded-xl flex items-center justify-between text-2xs"
-                            >
-                              <div className="space-y-0.5">
-                                <span className="font-bold text-slate-800 dark:text-white">
-                                  {b.id === 'DRAFT-TEMP' ? 'Borrador (Sin Guardar)' : b.id}
-                                </span>
-                                <span className="text-slate-450 block font-medium">Items de tratamiento: {b.items?.length || 0}</span>
-                              </div>
-                              <div className="flex items-center gap-2">
-                                <span className={`px-2 py-0.5 rounded text-[8px] font-bold uppercase ${
-                                  b.id === 'DRAFT-TEMP'
-                                    ? 'bg-amber-105 text-amber-800 dark:bg-amber-950/40 dark:text-amber-400'
-                                    : b.status === 'Aprobado' 
-                                      ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/20 dark:text-emerald-400' 
-                                      : 'bg-amber-50 text-amber-805 dark:bg-amber-950/20 dark:text-amber-400'
-                                }`}>
-                                  {b.id === 'DRAFT-TEMP' ? 'Borrador' : b.status}
-                                </span>
-                                <button
-                                  onClick={() => {
-                                    setSelectedPatientId(activePatient.id);
-                                    setCurrentTab('presupuestos');
-                                  }}
-                                  className="text-blue-600 hover:text-blue-700 font-bold hover:underline cursor-pointer"
-                                >
-                                  {b.id === 'DRAFT-TEMP' ? 'Editar / Guardar' : 'Detalles'}
-                                </button>
-                              </div>
-                            </div>
-                          ))}
-                        </div>
+                      {/* Online dot at bottom right */}
+                      {(activePatient.id === 'PX-88291-LV' || activePatient.id === 'PX-12345-JC') && (
+                        <span className="absolute bottom-0 right-0 w-3.5 h-3.5 bg-emerald-500 border-2 border-white dark:border-slate-900 rounded-full"></span>
                       )}
                     </div>
+                    
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-2">
+                        <h3 className="font-sans font-bold text-lg sm:text-xl text-slate-900 dark:text-white leading-tight">
+                          {activePatient.name}
+                        </h3>
+                        <span className="inline-block px-1.5 py-0.5 bg-emerald-50 dark:bg-emerald-950/35 text-emerald-600 dark:text-emerald-400 border border-emerald-200/50 rounded-md text-[8px] font-bold uppercase tracking-wider">
+                          {activePatient.status === 'Activo' ? 'ACTIVO' : activePatient.status}
+                        </span>
+                      </div>
+                      <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-3xs font-medium text-slate-450 dark:text-slate-400">
+                        <span className="font-mono">ID: {activePatient.id}</span>
+                        <span className="flex items-center gap-1">
+                          <Calendar className="w-3.5 h-3.5 text-slate-405" />
+                          {activePatient.dob}
+                        </span>
+                        <span className="flex items-center gap-1 font-semibold text-rose-600 dark:text-rose-400">
+                          <Droplet className="w-3.5 h-3.5 fill-current text-rose-500" />
+                          {activePatient.id === 'PX-88291-LV' ? '0 Positive' : activePatient.id === 'PX-12345-JC' ? 'AB Negative' : 'O Positive'}
+                        </span>
+                      </div>
+                    </div>
                   </div>
-                )}
 
-                {/* PESTAÑA C: HISTORIA CLÍNICA */}
-                {activeExpedienteTab === 'historia' && (
-                  isPrintMode && activePatient ? (
-                    <HistoriaClinicaPrintView
-                      patient={activePatient}
-                      medicalHistory={medicalHistory}
-                      onBack={() => setIsPrintMode(false)}
-                    />
-                  ) : (
-                    <div className="space-y-6">
-                      {/* Header y estado de actualización */}
-                      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 border-b border-slate-100 dark:border-slate-800/80 pb-3">
-                        <div>
-                          <h4 className="font-sans font-bold text-sm text-[#181c1e] dark:text-white">Historia Clínica Oficial</h4>
-                          <p className="text-3xs text-[#444748] dark:text-slate-400 mt-0.5">
-                            Formulario oficial de 11 secciones para el expediente clínico.
-                          </p>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <button
-                            type="button"
-                            onClick={() => setIsPrintMode(true)}
-                            className="px-3 py-1.5 bg-slate-100 dark:bg-slate-850 hover:bg-slate-200 dark:hover:bg-slate-800 text-slate-750 dark:text-slate-350 font-sans text-3xs font-bold uppercase tracking-wider rounded-lg flex items-center gap-1.5 cursor-pointer transition-colors no-print border border-slate-205 dark:border-slate-800"
-                          >
-                            <Printer className="w-3.5 h-3.5" />
-                            Vista de Impresión
-                          </button>
-                          <div className="text-[10px] bg-slate-100 dark:bg-slate-800 px-2.5 py-1 rounded-lg font-medium text-slate-500 dark:text-slate-400">
-                            Última actualización: <span className="font-mono font-bold">{formatLastUpdated(medicalHistory?.updatedAt)}</span>
+                  {/* Acciones Rápidas */}
+                  <div className="flex items-center gap-2 shrink-0 no-print">
+                    <button className="p-2 border border-slate-200 dark:border-slate-800 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-850 transition-colors text-amber-500 bg-amber-50/20 cursor-pointer" title="Favorito">
+                      <Star className="w-4 h-4 fill-current" />
+                    </button>
+                    <button className="p-2 border border-slate-200 dark:border-slate-800 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-850 transition-colors text-slate-450 dark:text-slate-400 cursor-pointer" title="Compartir">
+                      <Share2 className="w-4 h-4" />
+                    </button>
+                    <button className="p-2 border border-slate-200 dark:border-slate-800 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-850 transition-colors text-slate-450 dark:text-slate-400 cursor-pointer" title="Email">
+                      <Mail className="w-4 h-4" />
+                    </button>
+                  </div>
+                </div>
+
+                {/* Contenido del Expediente */}
+                <div className="flex-1 overflow-y-auto">
+                  <div className="space-y-6">
+                    {/* Grid de Resumen y Alergias */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                      
+                      {/* Resumen Clínico */}
+                      <div className="p-4 bg-slate-50/50 dark:bg-slate-800/10 border border-slate-205 dark:border-slate-800/80 rounded-2xl space-y-3.5">
+                        <h5 className="text-[10px] font-extrabold uppercase tracking-wider text-slate-500 dark:text-slate-400 font-sans">
+                          RESUMEN CLÍNICO
+                        </h5>
+                        <div className="space-y-2 text-2xs">
+                          <div className="flex justify-between items-center py-1.5 border-b border-slate-100 dark:border-slate-800/40">
+                            <span className="text-slate-500 dark:text-slate-400 font-medium">Médico Encargado:</span>
+                            <span className="font-bold text-slate-850 dark:text-slate-200">
+                              {activePatient.id === 'PX-88291-LV' ? 'Dr. Aris Thorne' : 'Dr. Pérez'}
+                            </span>
+                          </div>
+                          <div className="flex justify-between items-center py-1.5 border-b border-slate-100 dark:border-slate-800/40">
+                            <span className="text-slate-500 dark:text-slate-400 font-medium">Última Visita:</span>
+                            <span className="font-bold text-slate-850 dark:text-slate-200">
+                              {activePatient.id === 'PX-88291-LV' ? '2023-10-24' : '2026-06-16'}
+                            </span>
+                          </div>
+                          <div className="flex justify-between items-center py-1.5">
+                            <span className="text-slate-500 dark:text-slate-400 font-medium">Riesgo Detectado:</span>
+                            <span className="font-bold text-amber-600 dark:text-amber-400">
+                              {activePatient.id === 'PX-88291-LV' ? 'Moderate' : activePatient.riskLevel}
+                            </span>
                           </div>
                         </div>
                       </div>
 
-                    {loadingHistory ? (
-                      <div className="py-12 text-center text-slate-450 dark:text-slate-500 space-y-2">
-                        <svg className="animate-spin h-6.5 w-6.5 mx-auto text-blue-600 dark:text-blue-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                        </svg>
-                        <p className="font-sans text-xs">Cargando expediente médico...</p>
-                      </div>
-                    ) : (
-                      <div className="flex flex-col lg:flex-row gap-6">
-                        {/* Sidebar Interno */}
-                        <div className="w-full lg:w-64 shrink-0 flex flex-row lg:flex-col overflow-x-auto lg:overflow-x-visible border-b lg:border-b-0 lg:border-r border-slate-205 dark:border-slate-800 pb-4 lg:pb-0 lg:pr-6 gap-2">
-                          {[
-                            { id: 1, label: '1. Datos y Signos' },
-                            { id: 2, label: '2. Salud Sistémica' },
-                            { id: 3, label: '3. Ant. Familiares' },
-                            { id: 4, label: '4. Ant. Personales' },
-                            { id: 5, label: '5. Interrogatorio' },
-                            { id: 6, label: '6. Exploración Física' },
-                            { id: 7, label: '7. Exp. Intrabucal & IHOS' },
-                            { id: 8, label: '8. Odontograma' },
-                            { id: 9, label: '9. Consentimiento' },
-                            { id: 10, label: '10. Diagnóstico y Plan' },
-                            { id: 11, label: '11. Notas de Evolución' }
-                          ].map(sec => {
-                            const isTabActive = activeSectionTab === sec.id;
-                            const isSecCompleted = (() => {
-                              if (!officialSectionsData) return false;
-                              switch (sec.id) {
-                                case 1:
-                                  const pd = officialSectionsData.patientData || {};
-                                  return !!(pd.sexo || pd.lugarNacimiento || pd.peso || pd.altura);
-                                case 2:
-                                  const ss = officialSectionsData.systemicHealth || {};
-                                  return !!((ss.medications && ss.medications.length > 0) || (ss.systemicDiseases && ss.systemicDiseases.length > 0) || ss.motivoConsulta);
-                                case 3:
-                                  const fh = officialSectionsData.familyHistory || {};
-                                  return !!(fh.alergiasDetalle || fh.infectocontagiosasDetalle || (fh.matrix && Object.keys(fh.matrix).some(k => Object.values(fh.matrix[k] || {}).some(v => v === true))));
-                                case 4:
-                                  const ph = officialSectionsData.personalHistory || {};
-                                  return !!(ph.vivienda || ph.habitosHigienicos || ph.menarca || (ph.pathologicalTable && ph.pathologicalTable.length > 0));
-                                case 5:
-                                  const ir = officialSectionsData.systemsReview || {};
-                                  return !!(ir.symptoms && Object.keys(ir.symptoms).some(k => ir.symptoms[k]?.presenta === true));
-                                case 6:
-                                  const pe = officialSectionsData.physicalExam || {};
-                                  return !!(pe.actitudPaciente || pe.atmExploracion);
-                                case 7:
-                                  const ie = officialSectionsData.intrabucalExam || {};
-                                  return !!(ie.ihos?.cita1?.fecha || (ie.tejidosBlandos && Object.values(ie.tejidosBlandos).some(v => v !== '')));
-                                case 8:
-                                  return true;
-                                case 9:
-                                  return !!officialSectionsData.consentimiento?.acepto;
-                                case 10:
-                                  const dp = officialSectionsData.diagnosticoPlan || {};
-                                  return !!(dp.diagnosticoIntegral || (dp.planTxList && dp.planTxList.length > 0));
-                                case 11:
-                                  const en = officialSectionsData.evolucionNotes || {};
-                                  return !!(en.notes && en.notes.length > 0);
-                                default:
-                                  return false;
-                              }
-                            })();
-
-                            return (
-                              <button
-                                key={sec.id}
-                                type="button"
-                                onClick={() => setActiveSectionTab(sec.id)}
-                                className={`px-3 py-2 rounded-xl text-3xs font-bold text-left transition-all cursor-pointer whitespace-nowrap lg:whitespace-normal flex items-center justify-between gap-2 shrink-0 ${
-                                  isTabActive
-                                    ? 'bg-blue-50 text-blue-700 dark:bg-blue-950/30 dark:text-blue-450 border-l-2 border-blue-600'
-                                    : 'text-slate-650 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800'
-                                }`}
+                      {/* Alergias y Contraindicaciones */}
+                      <div className="p-4 bg-slate-50/50 dark:bg-slate-800/10 border border-slate-205 dark:border-slate-800/80 rounded-2xl space-y-3.5">
+                        <h5 className="text-[10px] font-extrabold uppercase tracking-wider text-slate-500 dark:text-slate-400 font-sans">
+                          ALERGIAS Y CONTRAINDICACIONES
+                        </h5>
+                        <div className="flex flex-wrap gap-2 pt-1">
+                          {activePatient.allergies ? (
+                            activePatient.allergies.split(',').map(allergy => (
+                              <span 
+                                key={allergy}
+                                className="px-3.5 py-1.5 bg-rose-50/50 dark:bg-rose-950/20 text-rose-600 dark:text-rose-400 border border-rose-200 dark:border-rose-900/40 rounded-full text-3xs font-extrabold tracking-wide font-sans shadow-4xs"
                               >
-                                <span>{sec.label}</span>
-                                {isSecCompleted && (
-                                  <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full shrink-0" title="Sección completada" />
-                                )}
-                              </button>
-                            );
-                          })}
-                        </div>
-
-                        {/* Contenido de la Sección */}
-                        <div className="flex-1 space-y-6">
-                          
-                          {/* Barra de Progreso y Guardar Sección */}
-                          <div className="bg-slate-50 dark:bg-slate-800/35 p-3 rounded-2xl border border-slate-205 dark:border-slate-800 flex flex-col sm:flex-row justify-between items-center gap-3">
-                            <div className="flex items-center gap-3 w-full sm:w-auto">
-                              <div className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
-                                Progreso General:
-                              </div>
-                              <div className="flex-1 sm:w-32 bg-slate-200 dark:bg-slate-700 h-2 rounded-full overflow-hidden">
-                                <div 
-                                  className="bg-emerald-500 h-full transition-all duration-350"
-                                  style={{ width: `${(calculateProgress.completed / calculateProgress.total) * 100}%` }}
-                                />
-                              </div>
-                              <div className="text-2xs font-bold text-slate-750 dark:text-slate-355 font-mono">
-                                {calculateProgress.completed} de {calculateProgress.total}
-                              </div>
-                            </div>
-                            
-                            <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
-                              {isDirty && (
-                                <span className="text-[10px] text-amber-605 dark:text-amber-400 font-bold flex items-center gap-1 mr-2 animate-pulse">
-                                  <AlertCircle className="w-3.5 h-3.5" /> Cambios sin guardar
-                                </span>
-                              )}
-                              {activeSectionTab !== 8 && (
-                                <button
-                                  type="button"
-                                  disabled={savingHistory}
-                                  onClick={handleSaveActiveSection}
-                                  className="px-3.5 py-1.5 bg-blue-600 hover:bg-blue-700 text-white font-sans text-3xs font-bold uppercase tracking-wider rounded-lg shadow-sm flex items-center gap-1.5 cursor-pointer disabled:opacity-50 transition-colors"
-                                >
-                                  <Save className="w-3.5 h-3.5" />
-                                  Guardar Sección
-                                </button>
-                              )}
-                              <button
-                                type="button"
-                                disabled={savingHistory}
-                                onClick={handleSaveAllOfficial}
-                                className="px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-sans text-3xs font-bold uppercase tracking-wider rounded-lg shadow-sm flex items-center gap-1.5 cursor-pointer disabled:opacity-50 transition-colors"
-                              >
-                                <CheckCircle2 className="w-3.5 h-3.5" />
-                                Guardar Todo
-                              </button>
-                            </div>
-                          </div>
-
-                          {/* Secciones de formulario */}
-                          {activeSectionTab === 1 && renderSection1()}
-                          {activeSectionTab === 2 && renderSection2()}
-                          {activeSectionTab === 3 && renderSection3()}
-                          {activeSectionTab === 4 && renderSection4()}
-                          {activeSectionTab === 5 && renderSection5()}
-                          {activeSectionTab === 6 && renderSection6()}
-                          {activeSectionTab === 7 && renderSection7()}
-                          {activeSectionTab === 8 && renderSection8()}
-                          {activeSectionTab === 9 && renderSection9()}
-                          {activeSectionTab === 10 && renderSection10()}
-                          {activeSectionTab === 11 && renderSection11()}
-
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                  )
-                )}
-
-                {/* PESTAÑA D: ADJUNTOS CLÍNICOS */}
-                {activeExpedienteTab === 'adjuntos' && (
-                  <div className="space-y-6">
-                    <div className="border-b border-slate-100 dark:border-slate-800/80 pb-3 flex justify-between items-center">
-                      <div>
-                        <h4 className="font-sans font-bold text-sm text-[#181c1e] dark:text-white">Adjuntos Clínicos</h4>
-                        <p className="text-3xs text-[#444748] dark:text-slate-400 mt-0.5 font-medium">Radiografías, documentos y archivos del expediente</p>
-                      </div>
-                      <div className="px-2.5 py-1 bg-slate-100 dark:bg-slate-800 rounded-lg text-3xs font-bold text-slate-650 dark:text-slate-350">
-                        {attachments.length} {attachments.length === 1 ? 'archivo' : 'archivos'}
-                      </div>
-                    </div>
-
-                    {/* Formulario de Subida */}
-                    <form onSubmit={handleUploadAttachment} className="bg-slate-50 dark:bg-slate-800/30 border border-slate-205 dark:border-slate-800/80 rounded-2xl p-5 space-y-4">
-                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                        {/* Selector de Archivo */}
-                        <div className="space-y-1.5">
-                          <label className="block text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
-                            Seleccionar Archivo (Máx 10 MB)
-                          </label>
-                          <div className="relative border border-dashed border-slate-300 dark:border-slate-700 hover:border-blue-500 dark:hover:border-blue-500 rounded-xl p-2.5 transition-colors flex items-center justify-center bg-white dark:bg-slate-900 cursor-pointer">
-                            <input
-                              type="file"
-                              id="clinical-file-input"
-                              accept="image/jpeg,image/png,image/webp,application/pdf"
-                              onChange={(e) => {
-                                const selected = e.target.files?.[0] || null;
-                                setAttachmentFile(selected);
-                              }}
-                              className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-                            />
-                            <div className="flex items-center gap-2">
-                              <FileUp className="w-4.5 h-4.5 text-slate-405 dark:text-slate-505" />
-                              <span className="text-3xs font-bold text-slate-600 dark:text-slate-350 truncate max-w-[180px]">
-                                {attachmentFile ? attachmentFile.name : 'Elegir archivo JPG, PNG, WEBP, PDF'}
+                                {allergy.trim() === 'Penicilina' ? 'Penicillin' : allergy.trim() === 'Látex' ? 'Latex (Mild)' : allergy.trim()}
                               </span>
-                            </div>
-                          </div>
-                        </div>
-
-                        {/* Selector de Categoría */}
-                        <div className="space-y-1.5">
-                          <label className="block text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
-                            Categoría
-                          </label>
-                          <select
-                            value={attachmentCategory}
-                            onChange={(e) => setAttachmentCategory(e.target.value)}
-                            className="w-full bg-white dark:bg-slate-900 border border-slate-250 dark:border-slate-800 rounded-xl px-3 py-2 text-2xs text-[#181c1e] dark:text-white focus:outline-none focus:ring-1 focus:ring-blue-500 font-bold"
-                          >
-                            <option value="Radiografía">Radiografía</option>
-                            <option value="Fotografía clínica">Fotografía clínica</option>
-                            <option value="PDF / Documento">PDF / Documento</option>
-                            <option value="Consentimiento">Consentimiento</option>
-                            <option value="Receta">Receta</option>
-                            <option value="Laboratorio">Laboratorio</option>
-                            <option value="General">General</option>
-                          </select>
-                        </div>
-
-                        {/* Descripción */}
-                        <div className="space-y-1.5">
-                          <label className="block text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
-                            Descripción / Notas
-                          </label>
-                          <input
-                            type="text"
-                            placeholder="Ej. Radiografía panorámica inicial"
-                            value={attachmentDescription}
-                            onChange={(e) => setAttachmentDescription(e.target.value)}
-                            className="w-full bg-white dark:bg-slate-900 border border-slate-250 dark:border-slate-800 rounded-xl px-3 py-2 text-2xs text-[#181c1e] dark:text-white focus:outline-none focus:ring-1 focus:ring-blue-500 font-medium"
-                          />
+                            ))
+                          ) : (
+                            <span className="text-slate-400 dark:text-slate-500 text-2xs font-medium">
+                              Ninguna alergia reportada.
+                            </span>
+                          )}
                         </div>
                       </div>
 
-                      <div className="flex justify-end pt-1">
-                        <button
-                          type="submit"
-                          disabled={uploadingAttachment || !attachmentFile}
-                          className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-3xs font-bold uppercase tracking-wider rounded-xl shadow-xs flex items-center gap-1.5 disabled:opacity-50 cursor-pointer transition-colors"
+                    </div>
+
+                    {/* Notas de Evolución Recientes */}
+                    <div className="space-y-4 pt-2">
+                      <div className="flex justify-between items-center border-b border-slate-100 dark:border-slate-800/80 pb-3">
+                        <h4 className="font-sans font-bold text-xs text-[#181c1e] dark:text-white uppercase tracking-wider">
+                          NOTAS DE EVOLUCIÓN RECIENTES
+                        </h4>
+                        <button 
+                          onClick={() => setShowQuickNoteForm(!showQuickNoteForm)}
+                          className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-sans text-[10px] font-bold uppercase tracking-wider rounded-xl cursor-pointer flex items-center gap-1.5 shadow-3xs transition-colors"
                         >
-                          {uploadingAttachment ? (
-                            <>
-                              <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                              Subiendo...
-                            </>
-                          ) : (
-                            <>
-                              <Upload className="w-3.5 h-3.5" />
-                              Subir archivo
-                            </>
-                          )}
+                          <Plus className="w-3.5 h-3.5 shrink-0" /> Anexar Nota
                         </button>
                       </div>
-                    </form>
 
-                    {/* Listado de Adjuntos */}
-                    {loadingAttachments ? (
-                      <div className="flex flex-col items-center justify-center py-10 space-y-2">
-                        <Loader2 className="w-6 h-6 animate-spin text-blue-500" />
-                        <span className="text-3xs text-slate-400 font-bold uppercase">Cargando adjuntos...</span>
-                      </div>
-                    ) : attachments.length === 0 ? (
-                      <div className="flex flex-col items-center justify-center py-12 px-4 border border-dashed border-slate-200 dark:border-slate-800 rounded-2xl bg-slate-25/10">
-                        <Paperclip className="w-8 h-8 text-slate-350 dark:text-slate-650 mb-2" />
-                        <p className="text-xs font-bold text-slate-500 dark:text-slate-400">Este paciente aún no tiene adjuntos clínicos.</p>
-                        <p className="text-3xs text-slate-405 dark:text-slate-500 mt-1">Sube radiografías, recetas o estudios clínicos en la parte superior.</p>
-                      </div>
-                    ) : (
-                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                        {attachments.map((att) => {
-                          const isPdf = att.mimeType === 'application/pdf';
-                          const isImage = att.mimeType.startsWith('image/');
-                          const fileSizeFormatted = formatBytes(att.sizeBytes);
-                          const uploadDate = new Date(att.createdAt).toLocaleDateString([], {
-                            day: 'numeric',
-                            month: 'short',
-                            year: 'numeric'
-                          });
+                      {/* Formulario rápido de nota */}
+                      {showQuickNoteForm && (
+                        <div className="p-4 bg-slate-55 dark:bg-slate-850 border border-blue-200 dark:border-blue-900/40 rounded-2xl space-y-3">
+                          <h5 className="font-bold text-xs text-blue-600 dark:text-blue-400">Nueva Nota de Evolución</h5>
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-3xs">
+                            <input 
+                              type="text" 
+                              placeholder="Título de la nota..." 
+                              value={noteForm.titulo}
+                              onChange={e => setNoteForm({ ...noteForm, titulo: e.target.value })}
+                              className="w-full p-2 bg-white dark:bg-slate-900 border border-slate-205 dark:border-slate-800 rounded-xl focus:outline-none"
+                            />
+                            <input 
+                              type="text" 
+                              placeholder="Doctor..." 
+                              value={noteForm.doctor}
+                              onChange={e => setNoteForm({ ...noteForm, doctor: e.target.value })}
+                              className="w-full p-2 bg-white dark:bg-slate-900 border border-slate-205 dark:border-slate-800 rounded-xl focus:outline-none"
+                            />
+                            <textarea 
+                              rows={2} 
+                              placeholder="Detalle clínico de evolución..." 
+                              value={noteForm.nota}
+                              onChange={e => setNoteForm({ ...noteForm, nota: e.target.value })}
+                              className="w-full p-2.5 bg-white dark:bg-slate-900 border border-slate-205 dark:border-slate-800 rounded-xl sm:col-span-2 resize-none focus:outline-none"
+                            />
+                          </div>
+                          <div className="flex justify-end gap-2 text-3xs">
+                            <button 
+                              onClick={() => setShowQuickNoteForm(false)}
+                              className="px-3 py-1.5 border border-slate-200 dark:border-slate-800 rounded-lg font-semibold cursor-pointer"
+                            >
+                              Cancelar
+                            </button>
+                            <button 
+                              onClick={handleSaveQuickNote}
+                              className="px-3.5 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-bold cursor-pointer"
+                            >
+                              Guardar Nota
+                            </button>
+                          </div>
+                        </div>
+                      )}
 
-                          return (
-                            <div key={att.id} className="border border-slate-200 dark:border-slate-800/80 rounded-2xl p-4 bg-white dark:bg-slate-900/60 shadow-3xs flex flex-col justify-between hover:shadow-2xs transition-shadow">
-                              <div className="space-y-2.5">
-                                {/* Encabezado Tarjeta */}
-                                <div className="flex items-start justify-between gap-2">
-                                  <div className="p-2 bg-slate-50 dark:bg-slate-850 rounded-xl">
-                                    {isImage && <Activity className="w-5 h-5 text-indigo-500 dark:text-indigo-455" />}
-                                    {isPdf && <FileText className="w-5 h-5 text-red-500 dark:text-red-455" />}
-                                    {!isImage && !isPdf && <Paperclip className="w-5 h-5 text-slate-400" />}
-                                  </div>
-                                  <span className="text-[9px] font-bold uppercase px-2 py-0.5 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-350 rounded-lg">
-                                    {att.category}
-                                  </span>
-                                </div>
-
-                                {/* Detalles */}
+                      {/* Listado de Notas */}
+                      <div className="space-y-3.5">
+                        {((officialSectionsData.evolucionNotes?.notes) || []).length === 0 ? (
+                          <div className="p-8 text-center text-slate-400 border border-dashed border-slate-200 dark:border-slate-800 rounded-2xl text-2xs bg-slate-50/20">
+                            No hay notas de evolución registradas para este paciente.
+                          </div>
+                        ) : (
+                          (officialSectionsData.evolucionNotes?.notes || []).map((n: any) => (
+                            <div key={n.id} className="p-4 bg-slate-50/40 dark:bg-slate-800/10 border border-slate-200 dark:border-slate-800 rounded-2xl space-y-2 relative group transition-all">
+                              <div className="flex justify-between items-start">
                                 <div>
-                                  <h5 className="text-2xs font-bold text-slate-750 dark:text-slate-200 truncate" title={att.originalName}>
-                                    {att.originalName}
-                                  </h5>
-                                  <p className="text-3xs text-slate-400 mt-0.5">
-                                    Subido el {uploadDate} • {fileSizeFormatted}
-                                  </p>
-                                  {att.description && (
-                                    <p className="text-3xs text-slate-600 dark:text-slate-405 bg-slate-50 dark:bg-slate-850 p-2 rounded-lg mt-2 font-medium">
-                                      {att.description}
-                                    </p>
-                                  )}
-                                  {att.uploadedBy && (
-                                    <p className="text-[8px] font-bold text-slate-450 dark:text-slate-550 uppercase tracking-wider mt-1.5">
-                                      Por: {att.uploadedBy}
-                                    </p>
-                                  )}
+                                  <span className="inline-block text-[8px] bg-slate-200 dark:bg-slate-800 text-slate-600 dark:text-slate-450 px-1.5 py-0.5 rounded font-mono font-bold uppercase tracking-wider mr-2">
+                                    {n.fecha}
+                                  </span>
+                                  <strong className="text-2xs font-bold text-slate-800 dark:text-white">{n.titulo}</strong>
                                 </div>
-                              </div>
-
-                              {/* Acciones */}
-                              <div className="flex items-center justify-end gap-2 border-t border-slate-100 dark:border-slate-850 pt-3 mt-4">
-                                {isImage && (
-                                  <button
-                                    type="button"
-                                    onClick={async () => {
-                                      try {
-                                        const token = getToken();
-                                        const headers = new Headers();
-                                        if (token) headers.set('Authorization', `Bearer ${token}`);
-                                        const res = await fetch(att.url!, { headers });
-                                        if (!res.ok) throw new Error('No se pudo cargar la vista previa');
-                                        const blob = await res.blob();
-                                        if (previewImage) {
-                                          URL.revokeObjectURL(previewImage);
-                                        }
-                                        const objectUrl = URL.createObjectURL(blob);
-                                        setPreviewImage(objectUrl);
-                                        setPreviewTitle(att.originalName);
-                                      } catch (err: any) {
-                                        if (showToast) showToast('Error al cargar la imagen', 'error');
-                                      }
-                                    }}
-                                    className="px-2.5 py-1.5 text-3xs font-bold text-slate-655 hover:text-slate-800 dark:text-slate-400 dark:hover:text-white flex items-center gap-1 hover:bg-slate-55 dark:hover:bg-slate-800 rounded-lg cursor-pointer transition-colors"
-                                  >
-                                    <Eye className="w-3.5 h-3.5" />
-                                    Ver
-                                  </button>
-                                )}
-                                {isPdf && (
-                                  <button
-                                    type="button"
-                                    onClick={async () => {
-                                      try {
-                                        const token = getToken();
-                                        const headers = new Headers();
-                                        if (token) headers.set('Authorization', `Bearer ${token}`);
-                                        const res = await fetch(att.url!, { headers });
-                                        if (!res.ok) throw new Error('No se pudo abrir el PDF');
-                                        const blob = await res.blob();
-                                        const objectUrl = URL.createObjectURL(blob);
-                                        window.open(objectUrl, '_blank');
-                                        setTimeout(() => URL.revokeObjectURL(objectUrl), 10000);
-                                      } catch (err: any) {
-                                        if (showToast) showToast('Error al abrir el PDF', 'error');
-                                      }
-                                    }}
-                                    className="px-2.5 py-1.5 text-3xs font-bold text-slate-655 hover:text-slate-800 dark:text-slate-400 dark:hover:text-white flex items-center gap-1 hover:bg-slate-55 dark:hover:bg-slate-800 rounded-lg cursor-pointer transition-colors"
-                                  >
-                                    <Eye className="w-3.5 h-3.5" />
-                                    Abrir PDF
-                                  </button>
-                                )}
-                                {!isImage && !isPdf && (
-                                  <button
-                                    type="button"
-                                    onClick={async () => {
-                                      try {
-                                        const token = getToken();
-                                        const headers = new Headers();
-                                        if (token) headers.set('Authorization', `Bearer ${token}`);
-                                        const res = await fetch(att.url!, { headers });
-                                        if (!res.ok) throw new Error('No se pudo descargar el archivo');
-                                        const blob = await res.blob();
-                                        const objectUrl = URL.createObjectURL(blob);
-                                        const a = document.createElement('a');
-                                        a.href = objectUrl;
-                                        a.download = att.originalName;
-                                        document.body.appendChild(a);
-                                        a.click();
-                                        a.remove();
-                                        URL.revokeObjectURL(objectUrl);
-                                      } catch (err: any) {
-                                        if (showToast) showToast('Error al descargar el archivo', 'error');
-                                      }
-                                    }}
-                                    className="px-2.5 py-1.5 text-3xs font-bold text-slate-655 hover:text-slate-800 dark:text-slate-400 dark:hover:text-white flex items-center gap-1 hover:bg-slate-55 dark:hover:bg-slate-800 rounded-lg cursor-pointer transition-colors"
-                                  >
-                                    <Download className="w-3.5 h-3.5" />
-                                    Descargar
-                                  </button>
-                                )}
                                 <button
-                                  type="button"
-                                  onClick={() => handleDeleteAttachment(att.id)}
-                                  className="px-2.5 py-1.5 text-3xs font-bold text-red-500 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950/20 rounded-lg cursor-pointer transition-colors"
+                                  onClick={() => handleRemoveQuickNote(n.id)}
+                                  className="text-red-500 hover:text-red-650 opacity-0 group-hover:opacity-100 transition-opacity p-1 cursor-pointer"
                                 >
-                                  Eliminar
+                                  <Trash2 className="w-3.5 h-3.5" />
                                 </button>
                               </div>
+                              <p className="text-3xs text-slate-600 dark:text-slate-350 whitespace-pre-wrap leading-relaxed">
+                                {n.nota}
+                              </p>
+                              <div className="text-[9px] text-slate-400 border-t border-slate-200/30 pt-1.5">
+                                Responsable: <span className="font-semibold">{n.doctor || 'Dr. Aris Thorne'}</span>
+                              </div>
                             </div>
-                          );
-                        })}
+                          ))
+                        )}
                       </div>
-                    )}
-                  </div>
-                )}
+                    </div>
 
+                    {/* Cuestionario Detallado de Historia Clínica */}
+                    <div className="border-t border-slate-200 dark:border-slate-850 pt-6 space-y-4">
+                      <div className="flex justify-between items-center">
+                        <div>
+                          <h5 className="font-sans font-bold text-xs text-slate-800 dark:text-white uppercase tracking-wider">
+                            Historia Clínica Detallada (11 Secciones)
+                          </h5>
+                          <p className="text-3xs text-slate-400 mt-0.5">Gestione el cuestionario completo oficial de salud dental.</p>
+                        </div>
+                        <button
+                          onClick={() => setShowDetailedHistory(!showDetailedHistory)}
+                          className="px-3.5 py-1.5 border border-slate-200 dark:border-slate-800 rounded-xl text-3xs font-semibold cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800 flex items-center gap-1.5 transition-colors select-none"
+                        >
+                          <span>{showDetailedHistory ? 'Ocultar Cuestionario' : 'Mostrar Cuestionario'}</span>
+                          {showDetailedHistory ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
+                        </button>
+                      </div>
+
+                      {showDetailedHistory && (
+                        <div className="p-4 bg-slate-50/20 dark:bg-slate-800/5 border border-slate-200 dark:border-slate-800 rounded-2xl animate-in fade-in duration-200">
+                          {renderDetailedHistoryQuestionnaire()}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
+
+            {/* Panel Lateral (Derecha): Cajoneras de Archivo */}
+            <div className="lg:w-80 w-full shrink-0 bg-slate-50 dark:bg-slate-900 border border-slate-205 dark:border-slate-800 rounded-2xl p-4 flex flex-col shadow-3xs no-print h-max lg:h-[750px]">
+              
+              {/* Encabezado del listado lateral */}
+              <div className="flex justify-between items-center pb-3 border-b border-slate-200 dark:border-slate-800">
+                <span className="font-mono text-[10px] uppercase tracking-wider font-bold text-slate-500 dark:text-slate-405">
+                  CAJONERAS DE ARCHIVO ({patients.length})
+                </span>
+                <div className="flex items-center gap-1.5">
+                  <button
+                    onClick={() => setSidebarSort('A-Z')}
+                    className={`p-1 rounded transition-colors cursor-pointer ${
+                      sidebarSort === 'A-Z'
+                        ? 'text-blue-600 bg-blue-50 dark:bg-blue-950/20'
+                        : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-200'
+                    }`}
+                    title="Ordenar A-Z"
+                  >
+                    <ArrowUpDown className="w-3.5 h-3.5" />
+                  </button>
+                  <button
+                    onClick={() => setSidebarSort('recent')}
+                    className={`p-1 rounded transition-colors cursor-pointer ${
+                      sidebarSort === 'recent'
+                        ? 'text-blue-600 bg-blue-50 dark:bg-blue-950/20'
+                        : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-200'
+                    }`}
+                    title="Ordenar por Citas Recientes"
+                  >
+                    <Clock className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              </div>
+
+              {/* Listado vertical de pacientes (ficheros) */}
+              <div className="flex-1 overflow-y-auto space-y-2 mt-3 pr-1 max-h-[500px] lg:max-h-none">
+                {sidebarPatients.map(p => {
+                  const isSelected = p.id === selectedPatientId;
+                  const lastAppt = patientCitasMap[p.id]?.proxima || patientCitasMap[p.id]?.ultima;
+                  const treatmentText = lastAppt ? lastAppt.treatment : 'Consulta general';
+                  const timeText = getPatientActivityTime(p.id);
+                  
+                  return (
+                    <button
+                      key={p.id}
+                      onClick={() => {
+                        setSelectedPatientId(p.id);
+                        // Restablecer a historial al cambiar de paciente
+                        setActiveExpedienteTab('historial');
+                      }}
+                      className={`w-full text-left p-3 rounded-xl border flex items-center gap-3 transition-all cursor-pointer ${
+                        isSelected
+                          ? 'bg-white dark:bg-slate-900 border-slate-205 border-l-4 border-l-blue-600 dark:border-slate-800 shadow-3xs'
+                          : 'bg-transparent border-transparent hover:bg-slate-100 dark:hover:bg-slate-800/45'
+                      }`}
+                    >
+                      {/* Avatar */}
+                      <div className="relative shrink-0 select-none">
+                        {p.avatar ? (
+                          <img src={p.avatar} alt={p.name} className="w-9 h-9 rounded-full object-cover border border-slate-100 dark:border-slate-800" />
+                        ) : (
+                          <div className="w-9 h-9 rounded-full bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300 flex items-center justify-center font-bold text-2xs">
+                            {p.initials}
+                          </div>
+                        )}
+                        {/* Indicator dot */}
+                        {(p.id === 'PX-88291-LV' || p.id === 'PX-12345-JC') && (
+                          <span className="absolute bottom-0 right-0 w-2.5 h-2.5 bg-emerald-500 border-2 border-white dark:border-slate-900 rounded-full"></span>
+                        )}
+                      </div>
+                      
+                      <div className="flex-1 min-w-0 space-y-0.5">
+                        <div className="flex justify-between items-center gap-2">
+                          <h4 className={`font-sans font-bold text-2xs truncate ${isSelected ? 'text-blue-600 dark:text-blue-400' : 'text-slate-800 dark:text-slate-200'}`}>
+                            {p.name}
+                          </h4>
+                          <span className="text-[9px] text-slate-400 shrink-0 font-medium">{timeText}</span>
+                        </div>
+                        <p className="text-[10px] text-slate-500 dark:text-slate-400 truncate">{treatmentText}</p>
+                        {/* Dots */}
+                        {renderStatusDots(p)}
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+
+            </div>
+
           </div>
+
         </div>
       )}
 
