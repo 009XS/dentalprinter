@@ -77,7 +77,7 @@ export interface Budget {
 }
 
 export interface ToothState {
-  id: number; // 1-32 para adultos, o letras/IDs para infantil
+  id: number; // Número FDI del diente (11-85)
   isPediatric: boolean;
   hasCaries: boolean;
   hasFracture: boolean;
@@ -85,6 +85,13 @@ export interface ToothState {
   hasCrown: boolean;
   hasImplant: boolean;
   isSelected?: boolean;
+  surfaces?: {
+    top?: 'caries' | 'fracture' | 'crown' | 'healthy';
+    bottom?: 'caries' | 'fracture' | 'crown' | 'healthy';
+    left?: 'caries' | 'fracture' | 'crown' | 'healthy';
+    right?: 'caries' | 'fracture' | 'crown' | 'healthy';
+    center?: 'caries' | 'fracture' | 'crown' | 'healthy';
+  };
 }
 
 export interface ClinicalAttachment {

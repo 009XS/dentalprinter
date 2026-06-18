@@ -608,6 +608,13 @@ app.put('/api/odontograms/:patientId', requireAuth, requireRole('admin', 'doctor
       hasMissing: z.boolean(),
       hasCrown: z.boolean(),
       hasImplant: z.boolean(),
+      surfaces: z.object({
+        top: z.enum(['caries', 'fracture', 'crown', 'healthy']).optional(),
+        bottom: z.enum(['caries', 'fracture', 'crown', 'healthy']).optional(),
+        left: z.enum(['caries', 'fracture', 'crown', 'healthy']).optional(),
+        right: z.enum(['caries', 'fracture', 'crown', 'healthy']).optional(),
+        center: z.enum(['caries', 'fracture', 'crown', 'healthy']).optional(),
+      }).optional(),
       notes: z.string().max(2000).optional(),
       updatedAt: z.string().optional(),
     })),
