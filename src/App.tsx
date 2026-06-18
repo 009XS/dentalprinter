@@ -600,7 +600,7 @@ export default function App() {
 
   if (loading) {
     return (
-      <div className="bg-slate-50 dark:bg-slate-950 text-slate-850 dark:text-slate-100 min-h-screen flex flex-col items-center justify-center p-4 font-sans text-xs">
+      <div className="bg-slate-50 dark:bg-slate-950 text-slate-850 dark:text-slate-100 h-screen w-screen overflow-hidden flex flex-col items-center justify-center p-4 font-sans text-xs">
         <div className="w-10 h-10 border-4 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
         <p className="font-bold text-slate-500 dark:text-slate-400 mt-4">Iniciando entorno clínico seguro...</p>
       </div>
@@ -609,7 +609,7 @@ export default function App() {
 
   if (!token) {
     return (
-      <div className="bg-slate-50 dark:bg-slate-955 text-slate-850 dark:text-slate-100 min-h-screen flex items-center justify-center p-4">
+      <div className="bg-slate-50 dark:bg-slate-950 text-slate-850 dark:text-slate-100 h-screen w-screen overflow-hidden flex items-center justify-center p-4">
         <div className="max-w-md w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-xl p-8 font-sans text-xs">
           <div className="text-center mb-6">
             <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-450 mb-3">
@@ -669,8 +669,8 @@ export default function App() {
   }
 
   return (
-    <div className={isDarkMode ? 'dark' : ''}>
-      <div className="bg-[#f8fafc] dark:bg-slate-950 text-slate-850 dark:text-slate-100 min-h-screen flex flex-col md:flex-row antialiased transition-colors duration-150">
+    <div className={`${isDarkMode ? 'dark' : ''} h-screen w-screen overflow-hidden`}>
+      <div className="bg-[#f8fafc] dark:bg-slate-950 text-slate-850 dark:text-slate-100 h-full w-full flex flex-col md:flex-row antialiased transition-colors duration-150">
         
         {/* NAVEGACIÓN LATERAL - Oculta en Móviles */}
         <Sidebar 
