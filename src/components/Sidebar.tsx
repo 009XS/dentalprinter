@@ -77,9 +77,9 @@ export default function Sidebar({
       {/* Logo y Encabezado de Marca */}
       <div className="mb-6 flex flex-col items-center px-2">
         <img 
-          src="/clinic-logo.jpg" 
+          src="/clinic-logo.png" 
           alt="Logo de la Clínica" 
-          className="w-20 h-20 rounded-2xl object-cover border-2 border-blue-100 dark:border-slate-700 shadow-md mb-3"
+          className="w-20 h-20 object-contain mb-3"
         />
         <h1 className="font-serif text-3xl font-bold text-blue-600 dark:text-blue-400 tracking-tight">
           Dentalprinter
