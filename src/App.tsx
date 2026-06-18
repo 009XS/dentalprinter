@@ -681,7 +681,6 @@ export default function App() {
           }}
           onOpenAppointmentModal={() => setAppointmentModalOpen(true)}
           onOpenPatientModal={() => setPatientModalOpen(true)}
-          notificationsCount={notificationsCount}
           onLogout={handleLogout}
         />
 
