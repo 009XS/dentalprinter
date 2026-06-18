@@ -2,10 +2,18 @@
 
 @custom-variant dark (&:where(.dark, .dark *));
 
-/* Transición suave para todo el body al cambiar de tema (claro/oscuro) */
-body {
+/* Evitar scroll del body principal y fijar el viewport */
+html, body {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  overflow: hidden;
+  background-color: #f8fafc;
   transition: background-color 0.3s ease, color 0.3s ease;
-  overflow-x: hidden;
+}
+
+html.dark, html.dark body {
+  background-color: #020617; /* Coincide con dark:bg-slate-950 */
 }
 
 /* Animaciones personalizadas */
