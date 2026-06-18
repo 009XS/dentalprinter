@@ -136,3 +136,37 @@ html.dark, html.dark body, html.dark #root {
   clip-path: polygon(12px 0%, calc(100% - 12px) 0%, 100% 100%, 0% 100%);
 }
 
+/* Ajustes de impresión profesionales (ocultar interfaz de navegación, cromo y habilitar páginas múltiples) */
+@media print {
+  html, body, #root, #root > div, #root > div > div {
+    height: auto !important;
+    overflow: visible !important;
+    background-color: white !important;
+    color: black !important;
+  }
+
+  #main-sidebar,
+  header,
+  aside,
+  button,
+  input,
+  select,
+  #btn-ai-assistant-header,
+  [role="alert"],
+  .toast,
+  .modal,
+  .no-print,
+  .print\:hidden {
+    display: none !important;
+  }
+
+  #main-scene-body, main {
+    display: block !important;
+    height: auto !important;
+    overflow: visible !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    width: 100% !important;
+  }
+}
+
