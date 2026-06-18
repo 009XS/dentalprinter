@@ -202,7 +202,7 @@ export default function PresupuestosView({
     <div id="presupuestos-view-root" className="p-6 overflow-y-auto space-y-6">
       
       {/* Título de la página */}
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4 border-b border-sky-100/10 dark:border-slate-800 pb-5">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4 border-b border-sky-100/10 dark:border-slate-800 pb-5 print:hidden">
         <div>
           <h2 className="font-serif text-3xl md:text-5xl font-bold text-slate-900 dark:text-white">Presupuestos</h2>
           <p className="font-sans text-sm md:text-base text-[#444748] dark:text-slate-400 mt-1">
@@ -220,7 +220,7 @@ export default function PresupuestosView({
       </div>
 
       {/* Bento Grid de Indicadores */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 print:hidden">
         
         {/* KPI 1 - Total Pendiente */}
         <div className="bg-white/80 dark:bg-slate-800/80 backdrop-blur-md rounded-xl p-6 border border-[#c4c7c8]/40 dark:border-slate-700/60 relative overflow-hidden group hover:border-blue-600 transition-all duration-300">
@@ -251,7 +251,7 @@ export default function PresupuestosView({
       </div>
 
       {/* Selector de Presupuestos (Dinamizado para cualquier paciente) */}
-      <div className="bg-white dark:bg-slate-900 border border-[#ebeef0] dark:border-slate-800 rounded-xl p-5 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-4 font-sans text-xs">
+      <div className="bg-white dark:bg-slate-900 border border-[#ebeef0] dark:border-slate-800 rounded-xl p-5 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-4 font-sans text-xs print:hidden">
         <div className="flex-1">
           <label className="block text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase mb-1.5">Seleccionar Presupuesto de Paciente</label>
           <select 
@@ -270,10 +270,10 @@ export default function PresupuestosView({
       </div>
 
       {/* Planilla de Conceptos */}
-      <div className="bg-white dark:bg-slate-900 border border-[#ebeef0] dark:border-slate-800 rounded-xl shadow-xs overflow-hidden">
+      <div className="bg-white dark:bg-slate-900 border border-[#ebeef0] dark:border-slate-800 rounded-xl shadow-xs overflow-hidden print:border-0 print:shadow-none print:bg-transparent">
         
         {/* Encabezado */}
-        <div className="p-6 border-b border-[#ebeef0] dark:border-slate-800 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-[#f1f4f6]/35 dark:bg-slate-900/60 font-sans">
+        <div className="p-6 border-b border-[#ebeef0] dark:border-slate-800 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-[#f1f4f6]/35 dark:bg-slate-900/60 font-sans print:bg-transparent print:px-0 print:pt-0 print:pb-4 print:border-b-2 print:border-slate-200">
           <div>
             <div className="flex items-center gap-2 mb-1">
               <h3 className="font-sans font-bold text-sm text-[#181c1e] dark:text-white uppercase">
@@ -289,7 +289,7 @@ export default function PresupuestosView({
           </div>
 
           {/* Exportar */}
-          <div className="flex gap-2 w-full md:w-auto">
+          <div className="flex gap-2 w-full md:w-auto print:hidden">
             {isLive && liveItems.length > 0 && (
               <button 
                 onClick={saveLiveBudget}
@@ -377,7 +377,7 @@ export default function PresupuestosView({
 
           {/* Ajuste de Descuentos e Importes */}
           <div className="flex flex-col sm:flex-row justify-between items-start gap-4 mt-8 pt-6 border-t border-slate-100 dark:border-slate-800">
-            <div className="flex items-center gap-2 text-xs text-slate-500">
+            <div className="flex items-center gap-2 text-xs text-slate-500 print:hidden">
               <Percent className="w-4 h-4 text-slate-400" />
               <span>Configurar Descuento:</span>
               <input 
@@ -391,7 +391,7 @@ export default function PresupuestosView({
               <span>%</span>
             </div>
 
-            <div className="w-full sm:w-72 font-sans space-y-2.5 text-xs">
+            <div className="w-full sm:w-72 font-sans space-y-2.5 text-xs print:ml-auto">
               <div className="flex justify-between text-slate-500">
                 <span>Subtotal</span>
                 <span className="font-medium text-slate-700 dark:text-slate-300">
