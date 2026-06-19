@@ -74,19 +74,21 @@ export default function Sidebar({
       id="main-sidebar"
       className="hidden md:flex flex-col h-screen w-[280px] shrink-0 border-r border-[#ebeef0] dark:border-slate-800 bg-white dark:bg-slate-900 py-6 px-4 sticky top-0 left-0 z-30 transition-colors duration-300"
     >
-      {/* Logo y Encabezado de Marca */}
-      <div className="mb-6 flex flex-col items-center px-2">
+      {/* Logo y Encabezado de Marca (Horizontal) */}
+      <div className="mb-6 flex flex-row items-center gap-3 px-2 w-full justify-start">
         <img 
           src="/clinic-logo.png" 
           alt="Logo de la Clínica" 
-          className="w-20 h-20 object-contain mb-3"
+          className="w-12 h-12 object-contain shrink-0"
         />
-        <h1 className="font-serif text-3xl font-bold text-blue-600 dark:text-blue-400 tracking-tight">
-          Dentalprinter
-        </h1>
-        <p className="text-xs font-semibold uppercase tracking-wider text-[#444748] dark:text-slate-400 mt-0.5">
-          Excelencia Clínica
-        </p>
+        <div className="flex flex-col">
+          <h1 className="font-serif text-xl md:text-2xl font-bold text-blue-600 dark:text-blue-400 tracking-tight leading-none">
+            Dentalprinter
+          </h1>
+          <p className="text-[9px] font-bold uppercase tracking-wider text-[#444748] dark:text-slate-400 mt-1.5 leading-none">
+            Excelencia Clínica
+          </p>
+        </div>
       </div>
 
       {/* Acciones Principales */}

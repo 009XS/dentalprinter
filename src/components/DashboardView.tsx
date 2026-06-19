@@ -366,15 +366,15 @@ export default function DashboardView({
   };
 
   return (
-    <div id="dashboard-view-root" className="p-6 overflow-y-auto space-y-6">
+    <div id="dashboard-view-root" className="p-4 md:p-5 overflow-y-auto space-y-4 md:space-y-5">
       
       {/* Encabezado */}
-      <div id="greeting-header" className="flex flex-col md:flex-row md:justify-between md:items-center gap-4 border-b border-sky-100/10 dark:border-slate-800 pb-5">
+      <div id="greeting-header" className="flex flex-col md:flex-row md:justify-between md:items-center gap-4 border-b border-sky-100/10 dark:border-slate-800 pb-2">
         <div>
-          <h2 className="font-serif text-3xl md:text-5xl font-bold text-slate-900 dark:text-white leading-tight">
+          <h2 className="font-serif text-lg md:text-xl font-bold text-slate-900 dark:text-white leading-tight">
             Buenos días, Dr. Juan Carlos
           </h2>
-          <p className="font-sans text-sm md:text-base text-[#444748] dark:text-slate-400 mt-1">
+          <p className="font-sans text-xs text-[#444748] dark:text-slate-400 mt-0.5">
             Aquí está el resumen clínico y operativo del consultorio para hoy.
           </p>
         </div>
