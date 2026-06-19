@@ -464,8 +464,8 @@ export default function CalendarView({
 
           {/* Grilla Mini Calendario */}
           <div className="grid grid-cols-7 text-center gap-y-1">
-            {['D', 'L', 'M', 'M', 'J', 'V', 'S'].map(d => (
-              <span key={d} className="text-[9px] font-bold text-slate-400 dark:text-slate-500">{d}</span>
+            {['D', 'L', 'M', 'M', 'J', 'V', 'S'].map((d, idx) => (
+              <span key={idx} className="text-[9px] font-bold text-slate-400 dark:text-slate-500">{d}</span>
             ))}
             {getMiniCalendarDays(miniCalMonth).map((day, idx) => {
               const iso = formatDateISO(day);
@@ -965,8 +965,8 @@ export default function CalendarView({
                     </h4>
                     
                     <div className="grid grid-cols-7 text-center gap-y-1">
-                      {['D', 'L', 'M', 'M', 'J', 'V', 'S'].map(d => (
-                        <span key={d} className="text-[8px] font-bold text-slate-400 dark:text-slate-500">{d}</span>
+                      {['D', 'L', 'M', 'M', 'J', 'V', 'S'].map((d, idx) => (
+                        <span key={idx} className="text-[8px] font-bold text-slate-400 dark:text-slate-500">{d}</span>
                       ))}
                       {getMiniCalendarDays(monthDate).map((day, idx) => {
                         const iso = formatDateISO(day);
