@@ -497,13 +497,12 @@ app.patch('/api/appointments/:id', requireAuth, requireRole('admin', 'doctor', '
 app.delete('/api/appointments/:id', requireAuth, requireRole('admin', 'doctor', 'recepcionista'), asyncHandler(async (req, res) => {
   const id = req.params.id;
   
-  await prisma.cita.update({
-    where: { id },
-    data: { estado: 'Cancelada' }
+  await prisma.cita.delete({
+    where: { id }
   });
 
-  await audit(req, 'cancel', 'appointment', id);
-  await notify('Cita cancelada', `La cita ${id} fue cancelada.`);
+  await audit(req, 'delete', 'appointment', id);
+  await notify('Cita eliminada', `La cita ${id} fue eliminada.`);
   
   res.status(204).end();
 }));

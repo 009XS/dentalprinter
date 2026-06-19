@@ -250,24 +250,18 @@ export default function DashboardView({
     }
   };
 
-  // Cancelar cita de forma persistente en SQLite
+  // Eliminar cita de forma permanente en SQLite
   const deleteAppointment = async (id: string) => {
     try {
       await cancelAppointment(id);
-      const updated = appointments.map(appt => {
-        if (appt.id === id) {
-          return { ...appt, status: 'Cancelada' as const };
-        }
-        return appt;
-      });
-      setAppointments(updated);
+      setAppointments(appointments.filter(appt => appt.id !== id));
       setActiveMenuId(null);
       if (showToast) {
-        showToast('Cita cancelada con éxito', 'info');
+        showToast('Cita eliminada con éxito', 'success');
       }
     } catch (err: any) {
       if (showToast) {
-        showToast(`Error al cancelar cita: ${err.message}`, 'error');
+        showToast(`Error al eliminar cita: ${err.message}`, 'error');
       }
     }
   };

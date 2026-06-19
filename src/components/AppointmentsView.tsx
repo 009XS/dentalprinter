@@ -54,17 +54,17 @@ export default function AppointmentsView({
     }
   };
 
-  // Acción: cancelar cita
+  // Acción: eliminar cita
   const handleCancel = async (id: string) => {
     try {
       await cancelAppointment(id);
-      setAppointments(appointments.map(a => a.id === id ? { ...a, status: 'Cancelada' } : a));
+      setAppointments(appointments.filter(a => a.id !== id));
       if (showToast) {
-        showToast('Cita marcada como Cancelada', 'info');
+        showToast('Cita eliminada con éxito', 'success');
       }
     } catch (err: any) {
       if (showToast) {
-        showToast(`Error al cancelar cita: ${err.message}`, 'error');
+        showToast(`Error al eliminar cita: ${err.message}`, 'error');
       }
     }
   };
