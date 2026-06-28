@@ -792,6 +792,7 @@ export default function App() {
             setSelectedPatientId={setSelectedPatientId}
             notifications={notifications}
             setNotifications={setNotifications}
+            appointments={appointments}
           />
 
           {/* VISTA DINÁMICA ACTIVA */}

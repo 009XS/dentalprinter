@@ -77,7 +77,7 @@ export default function ArchiveroView({
   const [statusFilter, setStatusFilter] = useState<'Todos' | 'Activo' | 'Inactivo' | 'Archivado' | 'Con Alergias' | 'Con Citas Futuras'>('Todos');
   const [sortBy, setSortBy] = useState<'A-Z' | 'proxima_cita' | 'ultima_cita' | 'fecha_registro' | 'estado'>('estado');
   const [activeExpedienteTab, setActiveExpedienteTab] = useState<'facturas' | 'ficha' | 'historial' | 'laboratorio'>('historial');
-  const [sidebarSort, setSidebarSort] = useState<'A-Z' | 'recent'>('recent');
+  const [sidebarSort, setSidebarSort] = useState<'A-Z' | 'recent'>('A-Z');
   const [showSidebar, setShowSidebar] = useState(true);
 
   const formatBytes = (bytes: number) => {
@@ -120,6 +120,37 @@ export default function ArchiveroView({
   const activePatient = useMemo(() => {
     return patients.find(p => p.id === selectedPatientId);
   }, [patients, selectedPatientId]);
+
+  const [sidebarLetterFilter, setSidebarLetterFilter] = useState<string>('Todos');
+
+  const currentLetterGroup = useMemo(() => {
+    if (!activePatient) return { label: 'A – D', start: 'A', end: 'D' };
+    const firstLetter = getSortableChar(activePatient.name);
+    const groups = [
+      { label: 'A – D', start: 'A', end: 'D' },
+      { label: 'E – H', start: 'E', end: 'H' },
+      { label: 'I – L', start: 'I', end: 'L' },
+      { label: 'M – P', start: 'M', end: 'P' },
+      { label: 'Q – T', start: 'Q', end: 'T' },
+      { label: 'U – X', start: 'U', end: 'X' },
+      { label: 'Y – Z', start: 'Y', end: 'Z' }
+    ];
+    return groups.find(g => firstLetter >= g.start && firstLetter <= g.end) || { label: 'A – D', start: 'A', end: 'D' };
+  }, [activePatient]);
+
+  useEffect(() => {
+    setSidebarLetterFilter('Todos');
+  }, [currentLetterGroup]);
+
+  const currentGroupLetters = useMemo(() => {
+    const letters = [];
+    const startCode = currentLetterGroup.start.charCodeAt(0);
+    const endCode = currentLetterGroup.end.charCodeAt(0);
+    for (let code = startCode; code <= endCode; code++) {
+      letters.push(String.fromCharCode(code));
+    }
+    return letters;
+  }, [currentLetterGroup]);
 
   const [medicalHistory, setMedicalHistory] = useState<MedicalHistory | null>(null);
   const [loadingHistory, setLoadingHistory] = useState(false);
@@ -717,13 +748,22 @@ export default function ArchiveroView({
   }, [sortedPatients, currentPage]);
 
   const sidebarPatients = useMemo(() => {
-    let list = [...patients];
+    let list = patients.filter(p => {
+      const firstLetter = getSortableChar(p.name);
+      return firstLetter >= currentLetterGroup.start && firstLetter <= currentLetterGroup.end;
+    });
+
     if (searchQuery) {
       list = list.filter(p =>
         p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
         p.id.toLowerCase().includes(searchQuery.toLowerCase())
       );
     }
+
+    if (sidebarLetterFilter !== 'Todos') {
+      list = list.filter(p => getSortableChar(p.name) === sidebarLetterFilter);
+    }
+
     if (sidebarSort === 'A-Z') {
       list.sort((a, b) => a.name.localeCompare(b.name));
     } else {
@@ -734,7 +774,7 @@ export default function ArchiveroView({
       });
     }
     return list;
-  }, [patients, searchQuery, sidebarSort, patientCitasMap]);
+  }, [patients, searchQuery, sidebarSort, currentLetterGroup, sidebarLetterFilter, patientCitasMap]);
 
   const getPatientActivityTime = (patientId: string) => {
     const times: Record<string, string> = {
@@ -3263,11 +3303,13 @@ export default function ArchiveroView({
               {/* Pestañas de archivador físico (slanted tabs) - Grupos de Letras */}
               <div className="flex flex-wrap items-end pl-2 sm:pl-4 -mb-[1px] relative z-10 select-none overflow-x-auto sm:overflow-x-visible no-print">
                 {[
-                  { label: 'A – E', start: 'A', end: 'E' },
-                  { label: 'F – J', start: 'F', end: 'J' },
-                  { label: 'K – O', start: 'K', end: 'O' },
-                  { label: 'P – T', start: 'P', end: 'T' },
-                  { label: 'U – Z', start: 'U', end: 'Z' }
+                  { label: 'A – D', start: 'A', end: 'D' },
+                  { label: 'E – H', start: 'E', end: 'H' },
+                  { label: 'I – L', start: 'I', end: 'L' },
+                  { label: 'M – P', start: 'M', end: 'P' },
+                  { label: 'Q – T', start: 'Q', end: 'T' },
+                  { label: 'U – X', start: 'U', end: 'X' },
+                  { label: 'Y – Z', start: 'Y', end: 'Z' }
                 ].map((group, idx) => {
                   const groupPatients = patients.filter(p => {
                     const initial = getSortableChar(p.name);
@@ -3572,33 +3614,63 @@ export default function ArchiveroView({
               <div className="lg:w-80 w-full shrink-0 bg-slate-50 dark:bg-slate-900 border border-slate-205 dark:border-slate-800 rounded-2xl p-4 flex flex-col shadow-3xs no-print h-max lg:h-[750px]">
                 
                 {/* Encabezado del listado lateral */}
-                <div className="flex justify-between items-center pb-3 border-b border-slate-200 dark:border-slate-800">
-                  <span className="font-mono text-[10px] uppercase tracking-wider font-bold text-slate-500 dark:text-slate-405">
-                    CAJONERAS DE ARCHIVO ({patients.length})
-                  </span>
-                  <div className="flex items-center gap-1.5">
+                <div className="flex flex-col gap-3 pb-3 border-b border-slate-200 dark:border-slate-800">
+                  <div className="flex justify-between items-center">
+                    <span className="font-mono text-[10px] uppercase tracking-wider font-bold text-slate-500 dark:text-slate-405">
+                      CAJON DE PACIENTES ({currentLetterGroup.label})
+                    </span>
+                    <div className="flex items-center gap-1.5">
+                      <button
+                        onClick={() => setSidebarSort('A-Z')}
+                        className={`p-1 rounded transition-colors cursor-pointer ${
+                          sidebarSort === 'A-Z'
+                            ? 'text-blue-600 bg-blue-50 dark:bg-blue-950/20'
+                            : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-200'
+                        }`}
+                        title="Ordenar A-Z"
+                      >
+                        <ArrowUpDown className="w-3.5 h-3.5" />
+                      </button>
+                      <button
+                        onClick={() => setSidebarSort('recent')}
+                        className={`p-1 rounded transition-colors cursor-pointer ${
+                          sidebarSort === 'recent'
+                            ? 'text-blue-600 bg-blue-50 dark:bg-blue-950/20'
+                            : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-200'
+                        }`}
+                        title="Ordenar por Citas Recientes"
+                      >
+                        <Clock className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Filtro por Letra Individual */}
+                  <div className="flex flex-wrap gap-1 items-center text-3xs no-print">
+                    <span className="text-slate-400 font-bold mr-1 text-[9px]">FILTRO:</span>
                     <button
-                      onClick={() => setSidebarSort('A-Z')}
-                      className={`p-1 rounded transition-colors cursor-pointer ${
-                        sidebarSort === 'A-Z'
-                          ? 'text-blue-600 bg-blue-50 dark:bg-blue-950/20'
-                          : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-200'
+                      onClick={() => setSidebarLetterFilter('Todos')}
+                      className={`px-1.5 py-0.5 rounded cursor-pointer transition-colors font-bold text-[9px] uppercase ${
+                        sidebarLetterFilter === 'Todos'
+                          ? 'bg-blue-600 text-white shadow-3xs'
+                          : 'bg-slate-100 dark:bg-slate-800 text-slate-500 hover:bg-slate-200 dark:hover:bg-slate-750'
                       }`}
-                      title="Ordenar A-Z"
                     >
-                      <ArrowUpDown className="w-3.5 h-3.5" />
+                      Todos
                     </button>
-                    <button
-                      onClick={() => setSidebarSort('recent')}
-                      className={`p-1 rounded transition-colors cursor-pointer ${
-                        sidebarSort === 'recent'
-                          ? 'text-blue-600 bg-blue-50 dark:bg-blue-950/20'
-                          : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-200'
-                      }`}
-                      title="Ordenar por Citas Recientes"
-                    >
-                      <Clock className="w-3.5 h-3.5" />
-                    </button>
+                    {currentGroupLetters.map(letter => (
+                      <button
+                        key={letter}
+                        onClick={() => setSidebarLetterFilter(letter)}
+                        className={`w-5 h-5 rounded flex items-center justify-center cursor-pointer transition-colors font-bold text-[9px] uppercase ${
+                          sidebarLetterFilter === letter
+                            ? 'bg-blue-600 text-white shadow-3xs'
+                            : 'bg-slate-100 dark:bg-slate-800 text-slate-550 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-750'
+                        }`}
+                      >
+                        {letter}
+                      </button>
+                    ))}
                   </div>
                 </div>
 

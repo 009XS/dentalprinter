@@ -36,6 +36,9 @@ export default function PatientsView({
 }: PatientsViewProps) {
   const [localSearch, setLocalSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<'Todos' | 'Activo' | 'Inactivo' | 'Archivado'>('Todos');
+  const [riskFilter, setRiskFilter] = useState<string>('Todos');
+  const [allergyFilter, setAllergyFilter] = useState<string>('Todos');
+  const [sortOrder, setSortOrder] = useState<string>('A-Z');
 
   // Conteos dinámicos rápidos
   const totalCount = patients.length;
@@ -50,8 +53,21 @@ export default function PatientsView({
     if (statusFilter !== 'Todos' && statusOfPatient !== statusFilter) {
       return false;
     }
+
+    // 2. Filtrar por nivel de riesgo
+    if (riskFilter !== 'Todos' && p.riskLevel !== riskFilter) {
+      return false;
+    }
+
+    // 3. Filtrar por alergias
+    if (allergyFilter === 'Con Alergias' && !p.allergies) {
+      return false;
+    }
+    if (allergyFilter === 'Sin Alergias' && p.allergies) {
+      return false;
+    }
     
-    // 2. Filtrar por búsqueda
+    // 4. Filtrar por búsqueda
     if (!localSearch) return true;
     const query = localSearch.toLowerCase();
     return (
@@ -60,6 +76,20 @@ export default function PatientsView({
       p.phone.includes(query) ||
       (p.allergies || '').toLowerCase().includes(query)
     );
+  }).sort((a, b) => {
+    if (sortOrder === 'A-Z') {
+      return a.name.localeCompare(b.name);
+    }
+    if (sortOrder === 'Z-A') {
+      return b.name.localeCompare(a.name);
+    }
+    if (sortOrder === 'Edad-Asc') {
+      return a.age - b.age;
+    }
+    if (sortOrder === 'Edad-Desc') {
+      return b.age - a.age;
+    }
+    return 0;
   });
 
   const getRiskBadgeClass = (risk: Patient['riskLevel']) => {
@@ -138,17 +168,55 @@ export default function PatientsView({
         </div>
 
         {/* Input de Búsqueda y Resultados */}
-        <div className="flex flex-col md:flex-row gap-4 items-stretch md:items-center flex-1 max-w-2xl">
-          <div className="relative flex-1">
+        <div className="flex flex-col lg:flex-row gap-3 items-stretch lg:items-center flex-1 w-full lg:max-w-none">
+          <div className="relative flex-1 min-w-[200px]">
             <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
             <input 
               type="text" 
               value={localSearch}
               onChange={(e) => setLocalSearch(e.target.value)}
-              placeholder="Buscar por nombre, código de expediente, teléfono..."
+              placeholder="Buscar por nombre, código, teléfono..."
               className="w-full pl-10 pr-4 py-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl font-sans text-xs text-slate-805 dark:text-white placeholder:text-slate-400 focus:outline-none focus:border-blue-600 dark:focus:border-blue-400 transition-all shadow-3xs"
             />
           </div>
+          
+          <div className="flex flex-wrap gap-2 items-center">
+            {/* Filtro de Riesgo */}
+            <select
+              value={riskFilter}
+              onChange={(e) => setRiskFilter(e.target.value)}
+              className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-2xs rounded-xl px-3 py-2.5 outline-none font-sans text-slate-700 dark:text-slate-300 cursor-pointer focus:ring-1 focus:ring-blue-600 shadow-3xs"
+            >
+              <option value="Todos">Riesgo: Todos</option>
+              <option value="Bajo Riesgo">Bajo Riesgo</option>
+              <option value="Medio Riesgo">Medio Riesgo</option>
+              <option value="Alto Riesgo">Alto Riesgo</option>
+            </select>
+
+            {/* Filtro de Alergias */}
+            <select
+              value={allergyFilter}
+              onChange={(e) => setAllergyFilter(e.target.value)}
+              className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-2xs rounded-xl px-3 py-2.5 outline-none font-sans text-slate-700 dark:text-slate-300 cursor-pointer focus:ring-1 focus:ring-blue-600 shadow-3xs"
+            >
+              <option value="Todos">Alergias: Todos</option>
+              <option value="Con Alergias">Con Alergias</option>
+              <option value="Sin Alergias">Sin Alergias</option>
+            </select>
+
+            {/* Ordenamiento */}
+            <select
+              value={sortOrder}
+              onChange={(e) => setSortOrder(e.target.value)}
+              className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-2xs rounded-xl px-3 py-2.5 outline-none font-sans text-slate-700 dark:text-slate-300 cursor-pointer focus:ring-1 focus:ring-blue-600 shadow-3xs"
+            >
+              <option value="A-Z">Ordenar: A – Z</option>
+              <option value="Z-A">Ordenar: Z – A</option>
+              <option value="Edad-Asc">Edad: Menor a Mayor</option>
+              <option value="Edad-Desc">Edad: Mayor a Menor</option>
+            </select>
+          </div>
+
           <div className="flex items-center gap-2 text-2xs font-sans font-medium text-slate-500 dark:text-slate-400 whitespace-nowrap px-1">
             <span>Filtrados: <strong>{filteredPatients.length}</strong> de <strong>{patients.length}</strong></span>
           </div>

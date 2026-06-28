@@ -11,7 +11,7 @@ import {
   XCircle
 } from 'lucide-react';
 import { markNotificationsRead } from '../api';
-import type { Patient } from '../types';
+import type { Patient, Appointment } from '../types';
 
 interface HeaderProps {
   currentTab: string;
@@ -30,6 +30,7 @@ interface HeaderProps {
   setSelectedPatientId: (id: string) => void;
   notifications: any[];
   setNotifications: (notifications: any[]) => void;
+  appointments?: Appointment[];
 }
 
 export default function Header({
@@ -48,9 +49,54 @@ export default function Header({
   selectedPatientId,
   setSelectedPatientId,
   notifications,
-  setNotifications
+  setNotifications,
+  appointments = []
 }: HeaderProps) {
   const [notifDropdownOpen, setNotifDropdownOpen] = useState(false);
+
+  // Obtener fecha de hoy en formato local YYYY-MM-DD
+  const localDate = new Date();
+  const year = localDate.getFullYear();
+  const month = String(localDate.getMonth() + 1).padStart(2, '0');
+  const day = String(localDate.getDate()).padStart(2, '0');
+  const todayStr = `${year}-${month}-${day}`;
+
+  const eligiblePatients = patients.filter(p => {
+    // 1. Citas de hoy para este paciente
+    const hasApptToday = (appointments || []).some(appt => {
+      const apptDate = appt.date;
+      const apptPatientId = appt.patientId || (appt.patient ? appt.patient.id : '');
+      return apptPatientId === p.id && apptDate === todayStr;
+    });
+
+    // 2. Notificaciones de hoy para este paciente
+    const hasNotifToday = notifications.some(n => {
+      const notifDate = n.createdAt ? n.createdAt.split('T')[0] : '';
+      if (notifDate !== todayStr) return false;
+
+      const titleLower = (n.title || '').toLowerCase();
+      const descLower = (n.desc || '').toLowerCase();
+      const pNameLower = p.name.toLowerCase();
+      const pIdLower = p.id.toLowerCase();
+
+      return titleLower.includes(pNameLower) || 
+             titleLower.includes(pIdLower) || 
+             descLower.includes(pNameLower) || 
+             descLower.includes(pIdLower);
+    });
+
+    return hasApptToday || hasNotifToday;
+  }).sort((a, b) => a.name.localeCompare(b.name));
+
+  // Asegurar que el paciente seleccionado actual siempre sea visible en el selector
+  const activeSelectorPatients = [...eligiblePatients];
+  if (selectedPatientId && !activeSelectorPatients.some(p => p.id === selectedPatientId)) {
+    const selectedPatient = patients.find(p => p.id === selectedPatientId);
+    if (selectedPatient) {
+      activeSelectorPatients.push(selectedPatient);
+      activeSelectorPatients.sort((a, b) => a.name.localeCompare(b.name));
+    }
+  }
 
   // Selector dinámico de placeholder de búsqueda en español
   const getSearchPlaceholder = () => {
@@ -126,10 +172,10 @@ export default function Header({
             className="border border-[#c4c7c8]/60 dark:border-slate-700/60 rounded-lg py-1 px-2 bg-[#f1f4f6]/80 dark:bg-slate-800/80 text-slate-800 dark:text-white font-sans text-xs outline-none focus:border-blue-600 dark:focus:border-blue-400 focus:ring-1 focus:ring-blue-600 dark:focus:ring-blue-400 transition-all cursor-pointer"
             title="Seleccionar paciente activo"
           >
-            {patients.length === 0 ? (
-              <option value="">Sin pacientes</option>
+            {activeSelectorPatients.length === 0 ? (
+              <option value="">Sin pacientes con actividad hoy</option>
             ) : (
-              patients.map(p => (
+              activeSelectorPatients.map(p => (
                 <option key={p.id} value={p.id}>{p.name}</option>
               ))
             )}
