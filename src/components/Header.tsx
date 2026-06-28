@@ -61,15 +61,38 @@ export default function Header({
   const day = String(localDate.getDate()).padStart(2, '0');
   const todayStr = `${year}-${month}-${day}`;
 
+  const isClinicalPendingText = (text: string) => {
+    const t = text.toLowerCase();
+    return t.includes('revis') || 
+           t.includes('limpie') || 
+           t.includes('operac') || 
+           t.includes('cirug') || 
+           t.includes('implante') || 
+           t.includes('consulta') || 
+           t.includes('cita') || 
+           t.includes('seguimiento') || 
+           t.includes('post-op') || 
+           t.includes('tratamiento') || 
+           t.includes('resultados') || 
+           t.includes('check') || 
+           t.includes('evalua') || 
+           t.includes('ortodoncia') || 
+           t.includes('endodoncia') || 
+           t.includes('dental') || 
+           t.includes('dentist');
+  };
+
   const eligiblePatients = patients.filter(p => {
-    // 1. Citas de hoy para este paciente
+    // 1. Citas de hoy para este paciente que tengan tratamiento clínico pendiente (no canceladas)
     const hasApptToday = (appointments || []).some(appt => {
       const apptDate = appt.date;
       const apptPatientId = appt.patientId || (appt.patient ? appt.patient.id : '');
-      return apptPatientId === p.id && apptDate === todayStr;
+      const isPending = appt.status !== 'Cancelada';
+      const isClinical = isClinicalPendingText(appt.treatment || '');
+      return apptPatientId === p.id && apptDate === todayStr && isPending && isClinical;
     });
 
-    // 2. Notificaciones de hoy para este paciente
+    // 2. Notificaciones de hoy para este paciente que hablen de pendientes clínicos
     const hasNotifToday = notifications.some(n => {
       const notifDate = n.createdAt ? n.createdAt.split('T')[0] : '';
       if (notifDate !== todayStr) return false;
@@ -79,10 +102,14 @@ export default function Header({
       const pNameLower = p.name.toLowerCase();
       const pIdLower = p.id.toLowerCase();
 
-      return titleLower.includes(pNameLower) || 
-             titleLower.includes(pIdLower) || 
-             descLower.includes(pNameLower) || 
-             descLower.includes(pIdLower);
+      const mentionsPatient = titleLower.includes(pNameLower) || 
+                              titleLower.includes(pIdLower) || 
+                              descLower.includes(pNameLower) || 
+                              descLower.includes(pIdLower);
+
+      const isClinicalNotif = isClinicalPendingText(n.title || '') || isClinicalPendingText(n.desc || '');
+
+      return mentionsPatient && isClinicalNotif;
     });
 
     return hasApptToday || hasNotifToday;
