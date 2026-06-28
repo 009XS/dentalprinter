@@ -428,7 +428,7 @@ export default function OdontogramaView({
         return 'fill-slate-100 dark:fill-slate-800/40 stroke-slate-350 dark:stroke-slate-700 opacity-40';
       }
       if (hasImplant) {
-        return 'fill-blue-500/20 dark:fill-blue-950/20 stroke-blue-500 dark:stroke-blue-600';
+        return 'fill-indigo-500/20 dark:fill-indigo-950/20 stroke-indigo-400 dark:stroke-indigo-600';
       }
       if (hasCrown) {
         return 'fill-blue-500/20 dark:fill-blue-500/10 stroke-blue-500 dark:stroke-blue-400';
@@ -439,7 +439,7 @@ export default function OdontogramaView({
         return 'fill-red-500 dark:fill-red-600 stroke-red-650 dark:stroke-red-500';
       }
       if (cond === 'fracture') {
-        return 'fill-red-500 dark:fill-red-600 stroke-red-650 dark:stroke-red-500';
+        return 'fill-amber-500 dark:fill-amber-600 stroke-amber-600 dark:stroke-amber-400';
       }
       if (cond === 'crown') {
         return 'fill-blue-500 dark:fill-blue-600 stroke-blue-600 dark:stroke-blue-400';
@@ -450,10 +450,10 @@ export default function OdontogramaView({
         return 'fill-red-500 dark:fill-red-600 stroke-red-650 dark:stroke-red-500';
       }
       if (stats?.hasFracture && surface === 'center') {
-        return 'fill-red-500 dark:fill-red-600 stroke-red-650 dark:stroke-red-500';
+        return 'fill-amber-500 dark:fill-amber-600 stroke-amber-600 dark:stroke-amber-400';
       }
 
-      return 'fill-white dark:fill-slate-900 stroke-blue-500/40 dark:stroke-blue-400/30 hover:fill-blue-50/20 dark:hover:fill-blue-950/10';
+      return 'fill-white dark:fill-slate-900 stroke-slate-400 dark:stroke-slate-650 hover:fill-slate-50 dark:hover:fill-slate-800';
     };
 
     return (
@@ -745,12 +745,28 @@ export default function OdontogramaView({
           {/* Guía de Colores / Leyenda */}
           <div className="flex flex-wrap gap-x-6 gap-y-3 mt-6 pt-5 border-t border-slate-100 dark:border-slate-800/80 text-xs font-semibold text-slate-500 dark:text-slate-400">
             <div className="flex items-center gap-2">
+              <span className="w-3.5 h-3.5 rounded border border-slate-350 dark:border-slate-600 bg-white dark:bg-slate-900 block"></span>
+              <span>Saludable / Intacto</span>
+            </div>
+            <div className="flex items-center gap-2">
               <span className="w-3.5 h-3.5 rounded border border-red-500 bg-red-500 block"></span>
               <span>Diente a tratar (Rojo)</span>
             </div>
             <div className="flex items-center gap-2">
+              <span className="w-3.5 h-3.5 rounded border border-amber-500 bg-amber-500 block"></span>
+              <span>Fractura / Daño</span>
+            </div>
+            <div className="flex items-center gap-2">
               <span className="w-3.5 h-3.5 rounded border border-blue-500 bg-blue-500 block"></span>
-              <span>Diente completo / Sano (Azul)</span>
+              <span>Diente completo (Azul)</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="w-3.5 h-3.5 rounded border border-indigo-500 bg-indigo-500/20 block"></span>
+              <span>Implante Integrado</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="w-4 h-4 rounded border border-red-400 bg-slate-100 dark:bg-slate-800 flex items-center justify-center font-black text-[9px] text-red-500">X</span>
+              <span>Pieza Ausente</span>
             </div>
           </div>
 
@@ -782,11 +798,11 @@ export default function OdontogramaView({
                 onClick={() => applyDiagnosticTool('Fracture')}
                 className={`py-3 px-2 rounded-lg border transition-all text-center flex flex-col items-center justify-center gap-1.5 cursor-pointer ${
                   activeTool === 'Fracture' 
-                    ? 'border-red-500 text-red-650 dark:text-red-400 bg-red-50/50 dark:bg-red-950/20' 
+                    ? 'border-amber-500 text-amber-650 dark:text-amber-400 bg-amber-50/50 dark:bg-amber-950/20' 
                     : 'border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-850 dark:text-slate-350 bg-white dark:bg-slate-900'
                 }`}
               >
-                <AlertTriangle className={`w-5 h-5 ${activeTool === 'Fracture' ? 'text-red-500' : 'text-slate-400'}`} />
+                <AlertTriangle className={`w-5 h-5 ${activeTool === 'Fracture' ? 'text-amber-500' : 'text-slate-400'}`} />
                 <span>Fractura</span>
               </button>
 
@@ -808,11 +824,11 @@ export default function OdontogramaView({
                 onClick={() => applyDiagnosticTool('Implant')}
                 className={`py-3 px-2 rounded-lg border transition-all text-center flex flex-col items-center justify-center gap-1.5 cursor-pointer ${
                   activeTool === 'Implant' 
-                    ? 'border-blue-600 text-blue-600 dark:text-blue-400 bg-blue-50/50 dark:bg-blue-950/20' 
+                    ? 'border-indigo-600 text-indigo-600 dark:text-indigo-400 bg-indigo-50/50 dark:bg-indigo-950/20' 
                     : 'border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-850 dark:text-slate-350 bg-white dark:bg-slate-900'
                 }`}
               >
-                <Hammer className={`w-5 h-5 ${activeTool === 'Implant' ? 'text-blue-600' : 'text-slate-400'}`} />
+                <Hammer className={`w-5 h-5 ${activeTool === 'Implant' ? 'text-indigo-650' : 'text-slate-400'}`} />
                 <span>Implante</span>
               </button>
 
@@ -821,11 +837,11 @@ export default function OdontogramaView({
                 onClick={() => applyDiagnosticTool('Extraction')}
                 className={`py-3 px-2 rounded-lg border transition-all text-center flex flex-col items-center justify-center gap-1.5 cursor-pointer col-span-2 ${
                   activeTool === 'Extraction' 
-                    ? 'border-red-500 text-red-650 dark:text-red-400 bg-red-50/50 dark:bg-red-950/20' 
+                    ? 'border-slate-650 text-slate-850 dark:text-slate-200 bg-slate-100 dark:bg-slate-850' 
                     : 'border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-850 dark:text-slate-350 bg-white dark:bg-slate-900'
                 }`}
               >
-                <Award className={`w-5 h-5 ${activeTool === 'Extraction' ? 'text-red-500' : 'text-slate-400'}`} />
+                <Award className={`w-5 h-5 ${activeTool === 'Extraction' ? 'text-slate-600 dark:text-slate-300' : 'text-slate-400'}`} />
                 <span>Ausente / Extracción</span>
               </button>
             </div>
