@@ -89,14 +89,13 @@ export default function ArchiveroView({
   };
 
   const alphabetSections = useMemo(() => [
-    { label: 'A–C', start: 'A', end: 'C' },
-    { label: 'D–F', start: 'D', end: 'F' },
-    { label: 'G–I', start: 'G', end: 'I' },
-    { label: 'J–L', start: 'J', end: 'L' },
-    { label: 'M–O', start: 'M', end: 'O' },
-    { label: 'P–R', start: 'P', end: 'R' },
-    { label: 'S–U', start: 'S', end: 'U' },
-    { label: 'V–Z', start: 'V', end: 'Z' },
+    { label: 'A – D', start: 'A', end: 'D' },
+    { label: 'E – H', start: 'E', end: 'H' },
+    { label: 'I – L', start: 'I', end: 'L' },
+    { label: 'M – P', start: 'M', end: 'P' },
+    { label: 'Q – T', start: 'Q', end: 'T' },
+    { label: 'U – X', start: 'U', end: 'X' },
+    { label: 'Y – Z', start: 'Y', end: 'Z' }
   ], []);
 
   const [activeSection, setActiveSection] = useState(alphabetSections[0]);
@@ -3348,8 +3347,7 @@ export default function ArchiveroView({
                       }}
                       className="group relative pb-[1px] focus:outline-none shrink-0"
                       style={{ 
-                        minWidth: '100px',
-                        smMinWidth: '130px',
+                        minWidth: showSidebar ? '95px' : '145px',
                         zIndex: isActive ? 20 : 10 - idx,
                         marginRight: '-8px'
                       }}
@@ -3358,7 +3356,9 @@ export default function ArchiveroView({
                       {/* Parent border emulator */}
                       <div className={`p-[1px] folder-tab-clip ${parentBg} transition-all duration-150`}>
                         {/* Inner tab */}
-                        <div className={`px-4 py-2 folder-tab-clip ${innerBg} transition-all duration-150 flex items-center justify-center text-xs font-bold`}>
+                        <div className={`folder-tab-clip ${innerBg} transition-all duration-150 flex items-center justify-center font-bold ${
+                          showSidebar ? 'px-3 py-2 text-[11px]' : 'px-5 py-2.5 text-xs'
+                        }`}>
                           {group.label}
                         </div>
                       </div>
