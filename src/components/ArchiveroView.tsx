@@ -2443,23 +2443,23 @@ export default function ArchiveroView({
     return (
       <div className="space-y-6">
         {/* Header y estado de actualización */}
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 border-b border-slate-100 dark:border-slate-800/80 pb-3">
+        <div className="flex flex-wrap justify-between items-center gap-3 border-b border-slate-100 dark:border-slate-800/80 pb-3 w-full">
           <div>
             <h4 className="font-sans font-bold text-sm text-[#181c1e] dark:text-white">Historia Clínica Oficial</h4>
             <p className="text-3xs text-[#444748] dark:text-slate-400 mt-0.5">
               Formulario oficial de 11 secciones para el expediente clínico.
             </p>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
             <button
               type="button"
               onClick={() => setIsPrintMode(true)}
-              className="px-3 py-1.5 bg-slate-100 dark:bg-slate-855 hover:bg-slate-205 dark:hover:bg-slate-800 text-slate-750 dark:text-slate-355 font-sans text-3xs font-bold uppercase tracking-wider rounded-lg flex items-center gap-1.5 cursor-pointer transition-colors no-print border border-slate-205 dark:border-slate-800"
+              className="px-3 py-1.5 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 font-sans text-3xs font-bold uppercase tracking-wider rounded-lg flex items-center gap-1.5 cursor-pointer transition-colors no-print border border-slate-200 dark:border-slate-750 whitespace-nowrap"
             >
               <Printer className="w-3.5 h-3.5" />
               Vista de Impresión
             </button>
-            <div className="text-[10px] bg-slate-100 dark:bg-slate-800 px-2.5 py-1 rounded-lg font-medium text-slate-500 dark:text-slate-400">
+            <div className="text-[10px] bg-slate-100 dark:bg-slate-800 px-2.5 py-1 rounded-lg font-medium text-slate-500 dark:text-slate-400 whitespace-nowrap">
               Última actualización: <span className="font-mono font-bold">{formatLastUpdated(medicalHistory?.updatedAt)}</span>
             </div>
           </div>
@@ -2554,25 +2554,25 @@ export default function ArchiveroView({
             <div className="flex-1 space-y-6">
               
               {/* Barra de Progreso y Guardar Sección */}
-              <div className="bg-slate-50 dark:bg-slate-800/35 p-3 rounded-2xl border border-slate-205 dark:border-slate-800 flex flex-col sm:flex-row justify-between items-center gap-3">
-                <div className="flex items-center gap-3 w-full sm:w-auto">
+              <div className="bg-slate-50 dark:bg-slate-800/35 p-3 rounded-2xl border border-slate-200 dark:border-slate-800 flex flex-wrap justify-between items-center gap-3 w-full">
+                <div className="flex items-center gap-3 shrink-0 flex-wrap">
                   <div className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
                     Progreso General:
                   </div>
-                  <div className="flex-1 sm:w-32 bg-slate-200 dark:bg-slate-700 h-2 rounded-full overflow-hidden">
+                  <div className="w-32 bg-slate-200 dark:bg-slate-700 h-2 rounded-full overflow-hidden">
                     <div 
                       className="bg-emerald-500 h-full transition-all duration-355"
                       style={{ width: `${(calculateProgress.completed / calculateProgress.total) * 100}%` }}
                     />
                   </div>
-                  <div className="text-2xs font-bold text-slate-750 dark:text-slate-355 font-mono">
+                  <div className="text-2xs font-bold text-slate-700 dark:text-slate-300 font-mono">
                     {calculateProgress.completed} de {calculateProgress.total}
                   </div>
                 </div>
                 
-                <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
+                <div className="flex items-center gap-2 justify-end shrink-0">
                   {isDirty && (
-                    <span className="text-[10px] text-amber-605 dark:text-amber-400 font-bold flex items-center gap-1 mr-2 animate-pulse">
+                    <span className="text-[10px] text-amber-600 dark:text-amber-400 font-bold flex items-center gap-1 mr-2 animate-pulse whitespace-nowrap">
                       <AlertCircle className="w-3.5 h-3.5" /> Cambios sin guardar
                     </span>
                   )}
@@ -2581,7 +2581,7 @@ export default function ArchiveroView({
                       type="button"
                       disabled={savingHistory}
                       onClick={handleSaveActiveSection}
-                      className="px-3.5 py-1.5 bg-blue-600 hover:bg-blue-700 text-white font-sans text-3xs font-bold uppercase tracking-wider rounded-lg shadow-sm flex items-center gap-1.5 cursor-pointer disabled:opacity-50 transition-colors"
+                      className="px-3.5 py-1.5 bg-blue-600 hover:bg-blue-700 text-white font-sans text-3xs font-bold uppercase tracking-wider rounded-lg shadow-sm flex items-center gap-1.5 cursor-pointer disabled:opacity-50 transition-colors whitespace-nowrap"
                     >
                       <Save className="w-3.5 h-3.5" />
                       Guardar Sección
@@ -2591,7 +2591,7 @@ export default function ArchiveroView({
                     type="button"
                     disabled={savingHistory}
                     onClick={handleSaveAllOfficial}
-                    className="px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-sans text-3xs font-bold uppercase tracking-wider rounded-lg shadow-sm flex items-center gap-1.5 cursor-pointer disabled:opacity-50 transition-colors"
+                    className="px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-sans text-3xs font-bold uppercase tracking-wider rounded-lg shadow-sm flex items-center gap-1.5 cursor-pointer disabled:opacity-50 transition-colors whitespace-nowrap"
                   >
                     <CheckCircle2 className="w-3.5 h-3.5" />
                     Guardar Todo
