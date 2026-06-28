@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { 
   Search, 
   Plus, 
@@ -9,7 +9,11 @@ import {
   Edit, 
   Phone, 
   ShieldAlert,
-  FolderOpen
+  FolderOpen,
+  Filter,
+  ChevronDown,
+  X,
+  RotateCcw
 } from 'lucide-react';
 import type { Patient } from '../types';
 
@@ -39,6 +43,27 @@ export default function PatientsView({
   const [riskFilter, setRiskFilter] = useState<string>('Todos');
   const [allergyFilter, setAllergyFilter] = useState<string>('Todos');
   const [sortOrder, setSortOrder] = useState<string>('A-Z');
+  const [showFiltersPanel, setShowFiltersPanel] = useState(false);
+  const filtersPanelRef = useRef<HTMLDivElement>(null);
+
+  // Cerrar el panel si se hace clic fuera de él
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (filtersPanelRef.current && !filtersPanelRef.current.contains(e.target as Node)) {
+        setShowFiltersPanel(false);
+      }
+    };
+    if (showFiltersPanel) document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [showFiltersPanel]);
+
+  const hasActiveFilters = riskFilter !== 'Todos' || allergyFilter !== 'Todos' || sortOrder !== 'A-Z';
+
+  const resetFilters = () => {
+    setRiskFilter('Todos');
+    setAllergyFilter('Todos');
+    setSortOrder('A-Z');
+  };
 
   // Conteos dinámicos rápidos
   const totalCount = patients.length;
@@ -135,11 +160,11 @@ export default function PatientsView({
         </button>
       </div>
 
-      {/* Filtros de Estado y Búsqueda */}
-      <div className="flex flex-col xl:flex-row gap-4 items-stretch xl:items-center justify-between">
+      {/* Barra de Filtros Compacta */}
+      <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center justify-between">
         
         {/* Pestañas de Filtro Rápido */}
-        <div className="flex items-center gap-1.5 bg-slate-100 dark:bg-slate-800/85 p-1 rounded-xl border border-slate-200/50 dark:border-slate-700/50 w-max overflow-x-auto shadow-3xs">
+        <div className="flex items-center gap-1.5 bg-slate-100 dark:bg-slate-800/85 p-1 rounded-xl border border-slate-200/50 dark:border-slate-700/50 overflow-x-auto shadow-3xs shrink-0">
           {[
             { id: 'Todos', label: 'Todos', count: totalCount },
             { id: 'Activo', label: 'Activos', count: activeCount },
@@ -167,9 +192,11 @@ export default function PatientsView({
           ))}
         </div>
 
-        {/* Input de Búsqueda y Resultados */}
-        <div className="flex flex-col lg:flex-row gap-3 items-stretch lg:items-center flex-1 w-full lg:max-w-none">
-          <div className="relative flex-1 min-w-[200px]">
+        {/* Búsqueda + Botón de Filtros Flotante */}
+        <div className="flex items-center gap-2 flex-1 min-w-0">
+
+          {/* Barra de búsqueda */}
+          <div className="relative flex-1 min-w-0">
             <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
             <input 
               type="text" 
@@ -179,46 +206,147 @@ export default function PatientsView({
               className="w-full pl-10 pr-4 py-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl font-sans text-xs text-slate-805 dark:text-white placeholder:text-slate-400 focus:outline-none focus:border-blue-600 dark:focus:border-blue-400 transition-all shadow-3xs"
             />
           </div>
-          
-          <div className="flex flex-wrap gap-2 items-center">
-            {/* Filtro de Riesgo */}
-            <select
-              value={riskFilter}
-              onChange={(e) => setRiskFilter(e.target.value)}
-              className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-2xs rounded-xl px-3 py-2.5 outline-none font-sans text-slate-700 dark:text-slate-300 cursor-pointer focus:ring-1 focus:ring-blue-600 shadow-3xs"
-            >
-              <option value="Todos">Riesgo: Todos</option>
-              <option value="Bajo Riesgo">Bajo Riesgo</option>
-              <option value="Medio Riesgo">Medio Riesgo</option>
-              <option value="Alto Riesgo">Alto Riesgo</option>
-            </select>
 
-            {/* Filtro de Alergias */}
-            <select
-              value={allergyFilter}
-              onChange={(e) => setAllergyFilter(e.target.value)}
-              className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-2xs rounded-xl px-3 py-2.5 outline-none font-sans text-slate-700 dark:text-slate-300 cursor-pointer focus:ring-1 focus:ring-blue-600 shadow-3xs"
-            >
-              <option value="Todos">Alergias: Todos</option>
-              <option value="Con Alergias">Con Alergias</option>
-              <option value="Sin Alergias">Sin Alergias</option>
-            </select>
+          {/* Contador de resultados */}
+          <span className="text-2xs font-sans font-medium text-slate-500 dark:text-slate-400 whitespace-nowrap hidden sm:inline">
+            <strong>{filteredPatients.length}</strong>/{patients.length}
+          </span>
 
-            {/* Ordenamiento */}
-            <select
-              value={sortOrder}
-              onChange={(e) => setSortOrder(e.target.value)}
-              className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-2xs rounded-xl px-3 py-2.5 outline-none font-sans text-slate-700 dark:text-slate-300 cursor-pointer focus:ring-1 focus:ring-blue-600 shadow-3xs"
+          {/* Botón de Filtros Avanzados */}
+          <div className="relative shrink-0" ref={filtersPanelRef}>
+            <button
+              onClick={() => setShowFiltersPanel(prev => !prev)}
+              className={`flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl border text-2xs font-bold cursor-pointer transition-all shadow-3xs ${
+                hasActiveFilters || showFiltersPanel
+                  ? 'bg-blue-600 dark:bg-blue-500 border-blue-600 dark:border-blue-500 text-white'
+                  : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800'
+              }`}
             >
-              <option value="A-Z">Ordenar: A – Z</option>
-              <option value="Z-A">Ordenar: Z – A</option>
-              <option value="Edad-Asc">Edad: Menor a Mayor</option>
-              <option value="Edad-Desc">Edad: Mayor a Menor</option>
-            </select>
-          </div>
+              <Filter className="w-3.5 h-3.5" />
+              <span>Filtros</span>
+              {hasActiveFilters && (
+                <span className="w-4 h-4 flex items-center justify-center rounded-full bg-white/25 text-[9px] font-bold">
+                  {[riskFilter !== 'Todos', allergyFilter !== 'Todos', sortOrder !== 'A-Z'].filter(Boolean).length}
+                </span>
+              )}
+              <ChevronDown className={`w-3 h-3 transition-transform ${showFiltersPanel ? 'rotate-180' : ''}`} />
+            </button>
 
-          <div className="flex items-center gap-2 text-2xs font-sans font-medium text-slate-500 dark:text-slate-400 whitespace-nowrap px-1">
-            <span>Filtrados: <strong>{filteredPatients.length}</strong> de <strong>{patients.length}</strong></span>
+            {/* Panel Flotante de Filtros */}
+            {showFiltersPanel && (
+              <div className="absolute right-0 top-full mt-2 z-50 w-72 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-xl overflow-hidden">
+                {/* Encabezado del panel */}
+                <div className="flex items-center justify-between px-4 py-3 border-b border-slate-100 dark:border-slate-800">
+                  <div className="flex items-center gap-2">
+                    <Filter className="w-3.5 h-3.5 text-blue-500" />
+                    <span className="text-xs font-bold text-slate-800 dark:text-white">Filtros Avanzados</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    {hasActiveFilters && (
+                      <button
+                        onClick={resetFilters}
+                        className="flex items-center gap-1 text-[10px] text-slate-500 hover:text-blue-600 dark:hover:text-blue-400 transition-colors cursor-pointer"
+                      >
+                        <RotateCcw className="w-3 h-3" />
+                        Limpiar
+                      </button>
+                    )}
+                    <button
+                      onClick={() => setShowFiltersPanel(false)}
+                      className="text-slate-400 hover:text-slate-700 dark:hover:text-white transition-colors cursor-pointer"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  </div>
+                </div>
+
+                {/* Cuerpo del panel */}
+                <div className="p-4 space-y-4">
+
+                  {/* Nivel de Riesgo */}
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">Nivel de Riesgo</label>
+                    <div className="flex flex-wrap gap-1.5">
+                      {['Todos', 'Bajo Riesgo', 'Medio Riesgo', 'Alto Riesgo'].map(opt => (
+                        <button
+                          key={opt}
+                          onClick={() => setRiskFilter(opt)}
+                          className={`px-2.5 py-1 rounded-lg text-[10px] font-semibold cursor-pointer transition-all border ${
+                            riskFilter === opt
+                              ? opt === 'Alto Riesgo'
+                                ? 'bg-red-500 text-white border-red-500'
+                                : opt === 'Medio Riesgo'
+                                  ? 'bg-amber-500 text-white border-amber-500'
+                                  : opt === 'Bajo Riesgo'
+                                    ? 'bg-emerald-500 text-white border-emerald-500'
+                                    : 'bg-blue-600 text-white border-blue-600'
+                              : 'bg-slate-50 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:border-blue-400'
+                          }`}
+                        >
+                          {opt === 'Todos' ? 'Todos' : opt}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Alergias */}
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">Alergias</label>
+                    <div className="flex flex-wrap gap-1.5">
+                      {['Todos', 'Con Alergias', 'Sin Alergias'].map(opt => (
+                        <button
+                          key={opt}
+                          onClick={() => setAllergyFilter(opt)}
+                          className={`px-2.5 py-1 rounded-lg text-[10px] font-semibold cursor-pointer transition-all border ${
+                            allergyFilter === opt
+                              ? opt === 'Con Alergias'
+                                ? 'bg-red-500 text-white border-red-500'
+                                : opt === 'Sin Alergias'
+                                  ? 'bg-emerald-500 text-white border-emerald-500'
+                                  : 'bg-blue-600 text-white border-blue-600'
+                              : 'bg-slate-50 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:border-blue-400'
+                          }`}
+                        >
+                          {opt}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Ordenamiento */}
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">Ordenar por</label>
+                    <div className="flex flex-col gap-1">
+                      {[
+                        { value: 'A-Z', label: 'Nombre A → Z' },
+                        { value: 'Z-A', label: 'Nombre Z → A' },
+                        { value: 'Edad-Asc', label: 'Edad: Menor a Mayor' },
+                        { value: 'Edad-Desc', label: 'Edad: Mayor a Menor' }
+                      ].map(opt => (
+                        <button
+                          key={opt.value}
+                          onClick={() => setSortOrder(opt.value)}
+                          className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-[11px] font-medium cursor-pointer transition-all text-left border ${
+                            sortOrder === opt.value
+                              ? 'bg-blue-600 text-white border-blue-600'
+                              : 'bg-slate-50 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:border-blue-400'
+                          }`}
+                        >
+                          {sortOrder === opt.value && <span className="w-1.5 h-1.5 rounded-full bg-white shrink-0" />}
+                          {opt.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                </div>
+
+                {/* Pie del panel con contador */}
+                <div className="px-4 py-2.5 bg-slate-50 dark:bg-slate-800/50 border-t border-slate-100 dark:border-slate-800 text-[10px] text-slate-500 dark:text-slate-400 text-center">
+                  Mostrando <strong className="text-slate-700 dark:text-slate-200">{filteredPatients.length}</strong> de <strong className="text-slate-700 dark:text-slate-200">{patients.length}</strong> pacientes
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </div>
