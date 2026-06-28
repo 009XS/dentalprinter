@@ -2474,9 +2474,9 @@ export default function ArchiveroView({
             <p className="font-sans text-xs">Cargando expediente médico...</p>
           </div>
         ) : (
-          <div className="flex flex-col lg:flex-row gap-6">
+          <div className="flex flex-col xl:flex-row gap-6">
             {/* Sidebar Interno */}
-            <div className="w-full lg:w-64 shrink-0 flex flex-row lg:flex-col overflow-x-auto lg:overflow-x-visible border-b lg:border-b-0 lg:border-r border-slate-205 dark:border-slate-800 pb-4 lg:pb-0 lg:pr-6 gap-2">
+            <div className="w-full xl:w-56 shrink-0 flex flex-row xl:flex-col overflow-x-auto xl:overflow-x-visible border-b xl:border-b-0 xl:border-r border-slate-205 dark:border-slate-800 pb-4 xl:pb-0 xl:pr-6 gap-2">
               {[
                 { id: 1, label: '1. Datos y Signos' },
                 { id: 2, label: '2. Salud Sistémica' },
@@ -2535,7 +2535,7 @@ export default function ArchiveroView({
                     key={sec.id}
                     type="button"
                     onClick={() => setActiveSectionTab(sec.id)}
-                    className={`px-3 py-2 rounded-xl text-3xs font-bold text-left transition-all cursor-pointer whitespace-nowrap lg:whitespace-normal flex items-center justify-between gap-2 shrink-0 lg:w-full ${
+                    className={`px-3 py-2 rounded-xl text-3xs font-bold text-left transition-all cursor-pointer whitespace-nowrap xl:whitespace-normal flex items-center justify-between gap-2 shrink-0 xl:w-full ${
                       isTabActive
                         ? 'bg-blue-50 text-blue-700 dark:bg-blue-950/30 dark:text-blue-450 border-l-2 border-blue-600'
                         : 'text-slate-650 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800'
