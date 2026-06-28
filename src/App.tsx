@@ -419,7 +419,9 @@ export default function App() {
           <OdontogramaView 
             activePatient={activePatientObj}
             onAddTreatmentItem={handleAddTreatmentItem}
-            searchQuery={searchQuery}
+            liveItems={liveItems}
+            setLiveItems={setLiveItems}
+            setCurrentTab={setCurrentTab}
             onOpenPatientModal={() => setPatientModalOpen(true)}
             showToast={showToast}
           />
