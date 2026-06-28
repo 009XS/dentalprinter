@@ -78,6 +78,7 @@ export default function ArchiveroView({
   const [sortBy, setSortBy] = useState<'A-Z' | 'proxima_cita' | 'ultima_cita' | 'fecha_registro' | 'estado'>('estado');
   const [activeExpedienteTab, setActiveExpedienteTab] = useState<'facturas' | 'ficha' | 'historial' | 'laboratorio'>('historial');
   const [sidebarSort, setSidebarSort] = useState<'A-Z' | 'recent'>('recent');
+  const [showSidebar, setShowSidebar] = useState(true);
 
   const formatBytes = (bytes: number) => {
     if (bytes === 0) return '0 Bytes';
@@ -3227,12 +3228,29 @@ export default function ArchiveroView({
         <div className="space-y-6 animate-in fade-in duration-200">
           
           {/* Botón de Regresar al Archivero */}
-          <div className="no-print">
+          <div className="no-print flex justify-between items-center gap-4 flex-wrap">
             <button 
               onClick={() => setSelectedPatientId('')}
               className="flex items-center gap-1 text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 font-sans font-bold text-xs uppercase tracking-wider cursor-pointer hover:underline"
             >
               <ArrowLeft className="w-4 h-4" /> Volver al Archivero
+            </button>
+
+            <button
+              onClick={() => setShowSidebar(!showSidebar)}
+              className="flex items-center gap-1.5 px-3.5 py-1.5 bg-white dark:bg-slate-900 border border-slate-205 dark:border-slate-800 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-850 text-blue-600 dark:text-blue-400 font-sans font-bold text-[10px] uppercase tracking-wider cursor-pointer shadow-3xs transition-all select-none"
+            >
+              {showSidebar ? (
+                <>
+                  <span>Maximizar Expediente</span>
+                  <ChevronRight className="w-3.5 h-3.5" />
+                </>
+              ) : (
+                <>
+                  <ChevronLeft className="w-3.5 h-3.5" />
+                  <span>Ver Ficheros de Pacientes</span>
+                </>
+              )}
             </button>
           </div>
 
@@ -3550,93 +3568,95 @@ export default function ArchiveroView({
             </div>
 
             {/* Panel Lateral (Derecha): Cajoneras de Archivo */}
-            <div className="lg:w-80 w-full shrink-0 bg-slate-50 dark:bg-slate-900 border border-slate-205 dark:border-slate-800 rounded-2xl p-4 flex flex-col shadow-3xs no-print h-max lg:h-[750px]">
-              
-              {/* Encabezado del listado lateral */}
-              <div className="flex justify-between items-center pb-3 border-b border-slate-200 dark:border-slate-800">
-                <span className="font-mono text-[10px] uppercase tracking-wider font-bold text-slate-500 dark:text-slate-405">
-                  CAJONERAS DE ARCHIVO ({patients.length})
-                </span>
-                <div className="flex items-center gap-1.5">
-                  <button
-                    onClick={() => setSidebarSort('A-Z')}
-                    className={`p-1 rounded transition-colors cursor-pointer ${
-                      sidebarSort === 'A-Z'
-                        ? 'text-blue-600 bg-blue-50 dark:bg-blue-950/20'
-                        : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-200'
-                    }`}
-                    title="Ordenar A-Z"
-                  >
-                    <ArrowUpDown className="w-3.5 h-3.5" />
-                  </button>
-                  <button
-                    onClick={() => setSidebarSort('recent')}
-                    className={`p-1 rounded transition-colors cursor-pointer ${
-                      sidebarSort === 'recent'
-                        ? 'text-blue-600 bg-blue-50 dark:bg-blue-950/20'
-                        : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-200'
-                    }`}
-                    title="Ordenar por Citas Recientes"
-                  >
-                    <Clock className="w-3.5 h-3.5" />
-                  </button>
-                </div>
-              </div>
-
-              {/* Listado vertical de pacientes (ficheros) */}
-              <div className="flex-1 overflow-y-auto space-y-2 mt-3 pr-1 max-h-[500px] lg:max-h-none">
-                {sidebarPatients.map(p => {
-                  const isSelected = p.id === selectedPatientId;
-                  const lastAppt = patientCitasMap[p.id]?.proxima || patientCitasMap[p.id]?.ultima;
-                  const treatmentText = lastAppt ? lastAppt.treatment : 'Consulta general';
-                  const timeText = getPatientActivityTime(p.id);
-                  
-                  return (
+            {showSidebar && (
+              <div className="lg:w-80 w-full shrink-0 bg-slate-50 dark:bg-slate-900 border border-slate-205 dark:border-slate-800 rounded-2xl p-4 flex flex-col shadow-3xs no-print h-max lg:h-[750px]">
+                
+                {/* Encabezado del listado lateral */}
+                <div className="flex justify-between items-center pb-3 border-b border-slate-200 dark:border-slate-800">
+                  <span className="font-mono text-[10px] uppercase tracking-wider font-bold text-slate-500 dark:text-slate-405">
+                    CAJONERAS DE ARCHIVO ({patients.length})
+                  </span>
+                  <div className="flex items-center gap-1.5">
                     <button
-                      key={p.id}
-                      onClick={() => {
-                        setSelectedPatientId(p.id);
-                        // Restablecer a historial al cambiar de paciente
-                        setActiveExpedienteTab('historial');
-                      }}
-                      className={`w-full text-left p-3 rounded-xl border flex items-center gap-3 transition-all cursor-pointer ${
-                        isSelected
-                          ? 'bg-white dark:bg-slate-900 border-slate-205 border-l-4 border-l-blue-600 dark:border-slate-800 shadow-3xs'
-                          : 'bg-transparent border-transparent hover:bg-slate-100 dark:hover:bg-slate-800/45'
+                      onClick={() => setSidebarSort('A-Z')}
+                      className={`p-1 rounded transition-colors cursor-pointer ${
+                        sidebarSort === 'A-Z'
+                          ? 'text-blue-600 bg-blue-50 dark:bg-blue-950/20'
+                          : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-200'
                       }`}
+                      title="Ordenar A-Z"
                     >
-                      {/* Avatar */}
-                      <div className="relative shrink-0 select-none">
-                        {p.avatar ? (
-                          <img src={p.avatar} alt={p.name} className="w-9 h-9 rounded-full object-cover border border-slate-100 dark:border-slate-800" />
-                        ) : (
-                          <div className="w-9 h-9 rounded-full bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300 flex items-center justify-center font-bold text-2xs">
-                            {p.initials}
-                          </div>
-                        )}
-                        {/* Indicator dot */}
-                        {(p.id === 'PX-88291-LV' || p.id === 'PX-12345-JC') && (
-                          <span className="absolute bottom-0 right-0 w-2.5 h-2.5 bg-emerald-500 border-2 border-white dark:border-slate-900 rounded-full"></span>
-                        )}
-                      </div>
-                      
-                      <div className="flex-1 min-w-0 space-y-0.5">
-                        <div className="flex justify-between items-center gap-2">
-                          <h4 className={`font-sans font-bold text-2xs truncate ${isSelected ? 'text-blue-600 dark:text-blue-400' : 'text-slate-800 dark:text-slate-200'}`}>
-                            {p.name}
-                          </h4>
-                          <span className="text-[9px] text-slate-400 shrink-0 font-medium">{timeText}</span>
-                        </div>
-                        <p className="text-[10px] text-slate-500 dark:text-slate-400 truncate">{treatmentText}</p>
-                        {/* Dots */}
-                        {renderStatusDots(p)}
-                      </div>
+                      <ArrowUpDown className="w-3.5 h-3.5" />
                     </button>
-                  );
-                })}
-              </div>
+                    <button
+                      onClick={() => setSidebarSort('recent')}
+                      className={`p-1 rounded transition-colors cursor-pointer ${
+                        sidebarSort === 'recent'
+                          ? 'text-blue-600 bg-blue-50 dark:bg-blue-950/20'
+                          : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-200'
+                      }`}
+                      title="Ordenar por Citas Recientes"
+                    >
+                      <Clock className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                </div>
 
-            </div>
+                {/* Listado vertical de pacientes (ficheros) */}
+                <div className="flex-1 overflow-y-auto space-y-2 mt-3 pr-1 max-h-[500px] lg:max-h-none">
+                  {sidebarPatients.map(p => {
+                    const isSelected = p.id === selectedPatientId;
+                    const lastAppt = patientCitasMap[p.id]?.proxima || patientCitasMap[p.id]?.ultima;
+                    const treatmentText = lastAppt ? lastAppt.treatment : 'Consulta general';
+                    const timeText = getPatientActivityTime(p.id);
+                    
+                    return (
+                      <button
+                        key={p.id}
+                        onClick={() => {
+                          setSelectedPatientId(p.id);
+                          // Restablecer a historial al cambiar de paciente
+                          setActiveExpedienteTab('historial');
+                        }}
+                        className={`w-full text-left p-3 rounded-xl border flex items-center gap-3 transition-all cursor-pointer ${
+                          isSelected
+                            ? 'bg-white dark:bg-slate-900 border-slate-205 border-l-4 border-l-blue-600 dark:border-slate-800 shadow-3xs'
+                            : 'bg-transparent border-transparent hover:bg-slate-100 dark:hover:bg-slate-800/45'
+                        }`}
+                      >
+                        {/* Avatar */}
+                        <div className="relative shrink-0 select-none">
+                          {p.avatar ? (
+                            <img src={p.avatar} alt={p.name} className="w-9 h-9 rounded-full object-cover border border-slate-100 dark:border-slate-800" />
+                          ) : (
+                            <div className="w-9 h-9 rounded-full bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300 flex items-center justify-center font-bold text-2xs">
+                              {p.initials}
+                            </div>
+                          )}
+                          {/* Indicator dot */}
+                          {(p.id === 'PX-88291-LV' || p.id === 'PX-12345-JC') && (
+                            <span className="absolute bottom-0 right-0 w-2.5 h-2.5 bg-emerald-500 border-2 border-white dark:border-slate-900 rounded-full"></span>
+                          )}
+                        </div>
+                        
+                        <div className="flex-1 min-w-0 space-y-0.5">
+                          <div className="flex justify-between items-center gap-2">
+                            <h4 className={`font-sans font-bold text-2xs truncate ${isSelected ? 'text-blue-600 dark:text-blue-400' : 'text-slate-800 dark:text-slate-200'}`}>
+                              {p.name}
+                            </h4>
+                            <span className="text-[9px] text-slate-400 shrink-0 font-medium">{timeText}</span>
+                          </div>
+                          <p className="text-[10px] text-slate-500 dark:text-slate-400 truncate">{treatmentText}</p>
+                          {/* Dots */}
+                          {renderStatusDots(p)}
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+
+              </div>
+            )}
 
           </div>
 
